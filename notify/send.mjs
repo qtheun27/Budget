@@ -11,8 +11,7 @@
 //
 // Options : --dry-run (affiche sans envoyer ni écrire), --force (renvoie même si déjà fait aujourd'hui)
 
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { Firestore, FieldValue } from '@google-cloud/firestore';
 import webpush from 'web-push';
 
 const DRY = process.argv.includes('--dry-run');
@@ -20,12 +19,9 @@ const FORCE = process.argv.includes('--force');
 const TZ = 'Europe/Brussels';
 const APP_URL = 'https://qtheun27.github.io/Budget/';
 
-// Jeton d'accès fourni à la main (test local) ou identifiants par défaut (GitHub Actions).
-const credential = process.env.GOOGLE_ACCESS_TOKEN
-  ? { getAccessToken: async () => ({ access_token: process.env.GOOGLE_ACCESS_TOKEN, expires_in: 3000 }) }
-  : applicationDefault();
-initializeApp({ credential, projectId: 'budget-foyer-qt' });
-const db = getFirestore();
+// Identifiants par défaut de Google Cloud : en GitHub Actions, ce sont ceux de la fédération
+// d'identité (type « external_account »), que la bibliothèque Firestore gère nativement.
+const db = new Firestore({ projectId: 'budget-foyer-qt' });
 
 /* ---------- dates (jours calendaires, fuseau de Bruxelles) ---------- */
 const todayISO = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -127,4 +123,9 @@ async function main() {
   console.log(`${accounts} compte(s) concerné(s), ${sent} notification(s) envoyée(s), ${removed} abonnement(s) expiré(s) retiré(s).`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => {
+  console.error(e);
+  // Annotation visible directement dans le résumé du workflow GitHub.
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=Rappels non envoyés::${String(e && (e.details || e.message) || e).replace(/\r?\n/g, ' ').slice(0, 900)}`);
+  process.exit(1);
+});
