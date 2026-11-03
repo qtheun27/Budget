@@ -4,7 +4,9 @@ rules_version = '2';
 //
 // households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, memberProfiles{uid: {name, photo}}, createdAt
 // households/{hid}/lines/{id}  lignes de budget
-// users/{uid}                  { householdId } : le foyer de chaque compte
+// users/{uid}                  { householdId, notify } : le foyer de chaque compte et ses réglages de rappels
+// users/{uid}/devices/{id}     appareils abonnés aux notifications (Web Push)
+// server/*                     réservé à l'envoi des rappels (aucun accès depuis l'appli)
 // invites/{code}               code d'invitation à usage unique, expire après 7 jours
 //
 // Principe : seuls les membres d'un foyer lisent et écrivent ses données.
@@ -110,10 +112,32 @@ service cloud.firestore {
       allow read: if signedIn() && me() == uid;
       // Je ne peux pointer que vers un foyer dont je suis membre (après l'écriture groupée).
       allow create, update: if signedIn() && me() == uid
-        && request.resource.data.keys().hasOnly(['householdId'])
+        && request.resource.data.keys().hasOnly(['householdId', 'notify'])
         && request.resource.data.householdId is string
+        && (!('notify' in request.resource.data) || validNotify(request.resource.data.notify))
         && me() in householdAfter(request.resource.data.householdId).members;
       allow delete: if signedIn() && me() == uid;
+
+      // Appareils abonnés aux rappels : chacun gère uniquement les siens.
+      match /devices/{deviceId} {
+        allow read, delete: if signedIn() && me() == uid;
+        allow create, update: if signedIn() && me() == uid
+          && request.resource.data.keys().hasOnly(['endpoint', 'keys', 'ua', 'createdAt'])
+          && request.resource.data.endpoint is string && request.resource.data.endpoint.size() <= 1000
+          && request.resource.data.endpoint.matches('^https://.*')
+          && request.resource.data.keys.keys().hasOnly(['p256dh', 'auth'])
+          && request.resource.data.keys.p256dh is string && request.resource.data.keys.p256dh.size() <= 200
+          && request.resource.data.keys.auth is string && request.resource.data.keys.auth.size() <= 100
+          && request.resource.data.ua is string && request.resource.data.ua.size() <= 200
+          && request.resource.data.createdAt is int;
+      }
+    }
+
+    function validNotify(n) {
+      return n is map && n.keys().hasOnly(['before3', 'sameDay', 'income'])
+        && (!('before3' in n) || n.before3 is bool)
+        && (!('sameDay' in n) || n.sameDay is bool)
+        && (!('income' in n) || n.income is bool);
     }
 
     // ---------- invitations ----------

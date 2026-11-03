@@ -175,6 +175,25 @@ test('un profil invalide est refusé', async () => {
 test('un non-membre ne modifie aucun profil', async () => {
   await assertFails(updateDoc(doc(as('C'), 'households/h1'), { 'memberProfiles.C': { name: 'C' } }));
 });
+test('réglages de rappels : chacun règle les siens', async () => {
+  await assertSucceeds(updateDoc(doc(as('A'), 'users/A'), { notify: { before3: true, sameDay: false, income: true } }));
+  await assertFails(updateDoc(doc(as('A'), 'users/A'), { notify: { before3: 'oui' } }));
+  await assertFails(updateDoc(doc(as('A'), 'users/A'), { notify: { spam: true } }));
+  await assertFails(updateDoc(doc(as('C'), 'users/A'), { notify: { before3: false } }));
+});
+test('appareils abonnés : privés à chaque compte', async () => {
+  const dev = { endpoint: 'https://web.push.apple.com/abc', keys: { p256dh: 'BPk', auth: 'xyz' }, ua: 'iPhone', createdAt: 1 };
+  await assertSucceeds(setDoc(doc(as('A'), 'users/A/devices/d1'), dev));
+  await assertSucceeds(getDoc(doc(as('A'), 'users/A/devices/d1')));
+  await assertFails(getDoc(doc(as('B'), 'users/A/devices/d1')));
+  await assertFails(setDoc(doc(as('B'), 'users/A/devices/d2'), dev));
+  await assertFails(setDoc(doc(as('A'), 'users/A/devices/d3'), { ...dev, endpoint: 'http://evil.example' }));
+});
+test("la zone serveur (clés d'envoi) est inaccessible", async () => {
+  await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'server/vapid'), { privateKey: 'secret' }); });
+  await assertFails(getDoc(doc(as('A'), 'server/vapid')));
+  await assertFails(setDoc(doc(as('A'), 'server/vapid'), { privateKey: 'x' }));
+});
 test('supprimer un foyer est refusé', async () => {
   await assertFails(deleteDoc(doc(as('A'), 'households/h1')));
 });

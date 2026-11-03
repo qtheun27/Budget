@@ -345,6 +345,22 @@ img.avatar{object-fit:cover;background:var(--fill)}
 .bar[aria-pressed="true"] i.inc{background:var(--green)}
 .solde-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
 .solde-grid .kpi{box-shadow:none;background:var(--fill2)}
+
+/* ---------- rappels ---------- */
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--fill);transition:background .25s}
+.switch span::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.08);transition:transform .3s var(--ease)}
+.switch input:checked+span{background:var(--green)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:disabled+span{opacity:.45}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.setrow{display:flex;align-items:center;gap:12px;padding:12px 0}
+.setrow+.setrow{border-top:.5px solid var(--sep)}
+.setrow .grow{flex:1;min-width:0}
+.setrow .t{font-weight:550}
+.setrow .s{font-size:13px;color:var(--fg2)}
+.setrows{margin:-4px 0 4px}
 </style>
 
 <div id="app">
@@ -601,6 +617,8 @@ const ERR = {
   'auth/account-exists-with-different-credential':'Un compte existe déjà avec cet e-mail. Connecte-toi avec ton mot de passe.',
   'auth/operation-not-supported-in-this-environment':"La connexion Google n'est pas possible ici. Utilise ton e-mail.",
   'auth/unauthorized-domain':"Ce site n'est pas autorisé pour la connexion Google.",
+  'push/denied':"Les notifications sont bloquées pour cette appli. Autorise-les dans les réglages de ton appareil, puis réessaie.",
+  'push/dismissed':"Autorise les notifications quand ton appareil te le demande.",
   'join/not-found':"Ce code n'existe pas. Vérifie-le avec la personne qui l'a créé.", 'join/used':'Ce code a déjà été utilisé. Demande un nouveau code.',
   'join/expired':'Ce code a expiré. Demande un nouveau code.', 'join/format':'Le code fait 8 caractères, par exemple K7QM-4XPT.',
   'permission-denied':"Accès refusé. Ce code n'est peut-être plus valable.", 'unavailable':'Pas de connexion internet.'
@@ -608,6 +626,12 @@ const ERR = {
 const GOOGLE_G = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 const snapReady = () => !!(F && state.hid && state.user);
 const errMsg = e => ERR[e && e.code] || `Une erreur est survenue, réessaie.${e && e.code ? ` (${e.code})` : ''}`;
+const VAPID_PUBLIC = 'BAC_PYAxHpKHlsuQF-U-vFyCd9zDRIIrlcXcRptgIgCnk9NU6zskkaXZ8DcOIHl50WJvPqG1RoJrw3f_WlX18Z0';
+const NOTIFY_DEFAULT = { before3:true, sameDay:true, income:false };
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const b64ToBytes = b => { const p = '='.repeat((4 - b.length % 4) % 4); const r = atob((b + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
 const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const r = new Uint32Array(8); crypto.getRandomValues(r); return [...r].map(x=>CODE_ABC[x % CODE_ABC.length]).join(''); };
 const fmtCode = c => c.slice(0,4) + '-' + c.slice(4);
@@ -664,6 +688,7 @@ const Store = {
       // Attendre la confirmation du serveur : un foyer tout juste créé ou rejoint n'est lisible qu'après.
       if(snap.metadata.hasPendingWrites) return;
       const h = snap.exists() ? snap.data().householdId : null;
+      state.notify = { ...NOTIFY_DEFAULT, ...((snap.exists() && snap.data().notify) || {}) };
       if(!h){ if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; state.mode = 'onboard'; render(); } return; }
       if(h !== state.hid) this.watchHousehold(h);
     }, err => this.fbError(err)));
@@ -778,7 +803,7 @@ const Store = {
     const ref = S.doc(S.collection(F.db, 'households'));
     const b = S.writeBatch(F.db);
     b.set(ref, { name, owner:me, members:[me], memberEmails:{ [me]: state.user.email }, createdAt:S.serverTimestamp() });
-    b.set(S.doc(F.db, 'users', me), { householdId: ref.id });
+    b.set(S.doc(F.db, 'users', me), { householdId: ref.id }, { merge:true });
     await b.commit();
     if(importLines && importLines.length) await this.bulkSave(importLines.map(l => ({...l, example:false})), ref.id);
   },
@@ -792,8 +817,33 @@ const Store = {
     const b = S.writeBatch(F.db);
     b.update(S.doc(F.db, 'households', d.hid), { members:S.arrayUnion(me), ['memberEmails.' + me]: state.user.email, joinCode: code });
     b.update(S.doc(F.db, 'invites', code), { usedBy: me });
-    b.set(S.doc(F.db, 'users', me), { householdId: d.hid });
+    b.set(S.doc(F.db, 'users', me), { householdId: d.hid }, { merge:true });
     await b.commit();
+  },
+  /* --- rappels (Web Push) --- */
+  deviceId(){ let id = ls.get('bf.device', null); if(!id){ id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); ls.set('bf.device', id); } return id; },
+  async pushStatus(){
+    if(!pushSupported()) return 'unsupported';
+    if(Notification.permission === 'denied') return 'denied';
+    try { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); return sub ? 'on' : 'off'; } catch { return 'off'; }
+  },
+  async enablePush(){
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') throw { code: perm === 'denied' ? 'push/denied' : 'push/dismissed' };
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToBytes(VAPID_PUBLIC) });
+    const j = sub.toJSON();
+    await F.S.setDoc(F.S.doc(F.db, 'users', state.user.uid, 'devices', this.deviceId()),
+      { endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth }, ua: (isIOS() ? 'iPhone / iPad' : navigator.userAgent).slice(0,200), createdAt: Date.now() });
+  },
+  async disablePush(){
+    try { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); } catch {}
+    await F.S.deleteDoc(F.S.doc(F.db, 'users', state.user.uid, 'devices', this.deviceId()));
+  },
+  saveNotify(patch){
+    state.notify = { ...NOTIFY_DEFAULT, ...(state.notify||{}), ...patch };
+    return this.write(F.S.updateDoc(F.S.doc(F.db, 'users', state.user.uid), { notify: state.notify }));
   },
   async createInvite(){
     const { S } = F; const code = genCode(); const expires = Date.now() + 7*86400000;
@@ -1177,6 +1227,24 @@ async function resizePhoto(file){
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
+function remindersCard(){
+  if(!state.pushState && F){ state.pushState = 'checking'; setTimeout(refreshPush, 0); }
+  const st = state.pushState || 'checking', n = { ...NOTIFY_DEFAULT, ...(state.notify||{}) };
+  const sw = (id, on, dis) => `<label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''} ${dis?'disabled':''}><span></span></label>`;
+  let device;
+  if(st==='unsupported') device = isIOS() && !isStandalone()
+    ? `<p class="muted small" style="margin:0">Sur iPhone, les rappels ne fonctionnent que dans l'appli installée : dans Safari, touche Partager puis « Sur l'écran d'accueil », et ouvre l'appli depuis son icône.</p>`
+    : `<p class="muted small" style="margin:0">Ce navigateur ne permet pas les notifications. Essaie Safari sur iPhone (appli installée), Chrome ou Edge.</p>`;
+  else device = `<div class="setrow"><div class="grow"><div class="t">Sur cet appareil</div><div class="s">${st==='on' ? 'Rappels activés' : st==='denied' ? 'Notifications bloquées dans les réglages de l\'appareil' : 'Rappels désactivés'}</div></div>${sw('n-device', st==='on', st==='denied' || st==='checking' || state.busy)}</div>`;
+  return `<section class="card"><div class="card-h"><h2>Rappels de paiement</h2>${st==='on' ? '<button class="link" data-act="push-test">Tester</button>' : ''}</div>
+    <div class="setrows">${device}
+      <div class="setrow"><div class="grow"><div class="t">3 jours avant</div><div class="s">Pour prévoir l'argent sur le compte</div></div>${sw('n-before3', n.before3)}</div>
+      <div class="setrow"><div class="grow"><div class="t">Le jour même</div><div class="s">Le matin de l'échéance</div></div>${sw('n-sameDay', n.sameDay)}</div>
+      <div class="setrow"><div class="grow"><div class="t">Aussi les rentrées</div><div class="s">Salaires et revenus attendus</div></div>${sw('n-income', n.income)}</div>
+    </div>
+    <p class="muted small" style="margin:4px 0 0">Envoyés chaque matin vers 8 h, en une seule notification. Les réglages valent pour tous tes appareils ; active les rappels sur chacun d'eux.</p></section>`;
+}
+async function refreshPush(){ const st = await Store.pushStatus(); if(st !== state.pushState){ state.pushState = st; if(state.route==='foyer') render(); } }
 function viewFoyer(){
   const fb = !!(F && state.hid), m = state.meta, f = state.form;
   const nameForm = `<section class="card"><div class="card-h"><h2>Nom du foyer</h2></div>
@@ -1215,6 +1283,7 @@ function viewFoyer(){
         <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
     </section>
     ${nameForm}
+    ${remindersCard()}
     <section class="card"><div class="card-h"><h2>Compte</h2></div>
       <div class="row" style="padding:0 0 14px">${avatar(me, 'sm')}<span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
       <button class="btn danger press" data-act="signout">Se déconnecter</button></section>
@@ -1376,6 +1445,7 @@ function setPeriod(p){ if(!PERIODS[p] || p===state.period) return; state.period 
 function route(){
   const h = location.hash.replace('#','');
   state.route = ROUTES.some(r=>r.id===h) ? h : 'accueil';
+  if(state.route==='foyer' && F) refreshPush();
   render(); window.scrollTo({top:0});
 }
 document.addEventListener('click', async e => {
@@ -1407,6 +1477,9 @@ document.addEventListener('click', async e => {
       try { const p = new F.A.GoogleAuthProvider(); p.setCustomParameters({ prompt:'select_account' }); await F.A.signInWithPopup(F.auth, p); }
       catch(e){ console.warn('Connexion Google', e); if(!['auth/popup-closed-by-user','auth/cancelled-popup-request','auth/user-cancelled'].includes(e.code)) state.formErr = errMsg(e); }
       state.busy = false; return render(); }
+    case 'push-test': { try { const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('Budget du Foyer', { body: "C'est ainsi que tes rappels s'afficheront.", icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'test' }); }
+      catch { toast("La notification de test n'a pas pu s'afficher."); } return; }
     case 'photo-pick': $('#photo-input').click(); return;
     case 'photo-google': Store.saveProfile({ ...profileOf(state.user.uid), photo: Store.googlePhoto() }); toast('Photo Google utilisée'); return;
     case 'photo-remove': { const p0 = { ...profileOf(state.user.uid) }; delete p0.photo; Store.saveProfile(p0); toast('Photo retirée'); return; }
@@ -1442,6 +1515,16 @@ document.addEventListener('change', async e => {
   if(!state.user || !state.hid) return;
   try { const photo = await resizePhoto(file); Store.saveProfile({ ...profileOf(state.user.uid), photo }); toast('Photo enregistrée'); }
   catch { toast("Cette image n'a pas pu être lue. Essaie une photo JPEG ou PNG."); }
+});
+document.addEventListener('change', async e => {
+  const el = e.target; if(!el.id || !/^n-/.test(el.id)) return;
+  if(el.id === 'n-device'){
+    state.busy = true; render();
+    try { if(el.checked){ await Store.enablePush(); toast('Rappels activés sur cet appareil'); } else { await Store.disablePush(); toast('Rappels désactivés sur cet appareil'); } }
+    catch(err){ console.warn(err); toast(errMsg(err)); }
+    state.busy = false; state.pushState = await Store.pushStatus(); render(); return;
+  }
+  const key = el.id.slice(2); Store.saveNotify({ [key]: el.checked });
 });
 document.addEventListener('change', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
 document.addEventListener('submit', async e => {

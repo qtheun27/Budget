@@ -1,0 +1,47 @@
+# Rappels d'échéance : chaque matin, envoie les notifications prévues (3 jours avant et le jour même).
+# Connexion à Google Cloud sans clé (fédération d'identité), limitée à la branche main de ce dépôt.
+name: Rappels d'échéance
+
+on:
+  schedule:
+    - cron: '43 6 * * *'   # 7 h 43 (hiver) / 8 h 43 (été), heure de Bruxelles
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Renvoyer même si les rappels du jour sont déjà partis"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: rappels
+  cancel-in-progress: false
+
+jobs:
+  envoyer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/523514248590/locations/global/workloadIdentityPools/github/providers/budget-repo
+          service_account: budget-notify@budget-foyer-qt.iam.gserviceaccount.com
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: notify/package-lock.json
+
+      - name: Installer
+        working-directory: notify
+        run: npm ci --no-audit --no-fund
+
+      - name: Envoyer les rappels
+        working-directory: notify
+        run: node send.mjs ${{ inputs.force && '--force' || '' }}
