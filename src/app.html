@@ -586,7 +586,7 @@ const Store = {
     const base = `https://www.gstatic.com/firebasejs/${FB_VERSION}/`;
     const [appM, A, S] = await Promise.all(['firebase-app.js','firebase-auth.js','firebase-firestore.js'].map(f => import(base + f)));
     const app = appM.initializeApp(FIREBASE_CONFIG);
-    const auth = A.initializeAuth(app, { persistence: [A.indexedDBLocalPersistence, A.browserLocalPersistence] });
+    const auth = A.initializeAuth(app, { persistence: [A.indexedDBLocalPersistence, A.browserLocalPersistence], popupRedirectResolver: A.browserPopupRedirectResolver });
     auth.languageCode = 'fr';
     let db;
     try { db = S.initializeFirestore(app, { localCache: S.persistentLocalCache({ tabManager: S.persistentMultipleTabManager() }) }); }
