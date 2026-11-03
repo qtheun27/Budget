@@ -509,7 +509,7 @@ const shareOf = (l, sc = scopeNow()) => sc==='pro' ? proPart(l) : sc==='private'
 const yearlyRaw = l => (+l.amount||0) * (FREQ[l.freq]?.perYear || 0);
 const yearly = (l, sc) => yearlyRaw(l) * shareOf(l, sc);
 const perPeriod = (l, p=state.period, sc) => yearly(l, sc) / PERIODS[p].div;
-const inScope = (l, sc) => shareOf(l, sc) > 0;
+const inScope = (l, sc) => shareOf(l, sc) > 0 && isActive(l);
 const proLabel = l => { const n = Math.round(proPart(l)*100); return n===0 ? '' : n===100 ? '<span class="ptag">Pro</span>' : `<span class="ptag">Pro ${n} %</span>`; };
 const sum = (arr, f) => arr.reduce((a,x)=>a+f(x),0);
 
@@ -531,13 +531,28 @@ const daysBetween = (a,b) => Math.round((b-a)/86400000);
 const parseAmount = s => { const v = parseFloat(String(s).replace(/\s| /g,'').replace(',','.')); return isFinite(v) ? v : NaN; };
 
 /** Next occurrence on or after `from` (default today). */
+/** Date de fin des paiements (crédit, location…), ou null si sans fin. */
+const endDate = l => (l.freq!=='once' && l.end) ? parseDate(l.end) : null;
+/** Une ligne est active tant que sa date de fin n'est pas passée. */
+const isActive = (l, at = today0()) => { const e = endDate(l); return !e || e >= at; };
 function nextDue(l, from = today0()){
   const d = parseDate(l.due); if(!d) return null;
   if(l.freq==='once') return d;
-  if(l.freq==='weekly'){ const r = new Date(d); while(r < from) r.setDate(r.getDate()+7); return r; }
-  const k = FREQ[l.freq].months; let r = d, i = 0;
-  while(r < from && i++ < 600) r = addMonths(d, k*i);
-  return r;
+  const e = endDate(l); let r;
+  if(l.freq==='weekly'){ r = new Date(d); while(r < from) r.setDate(r.getDate()+7); }
+  else { const k = FREQ[l.freq].months; let i = 0; r = d; while(r < from && i++ < 600) r = addMonths(d, k*i); }
+  return e && r > e ? null : r;
+}
+/** Paiements restants jusqu'à la date de fin : nombre et montant. */
+function remaining(l){
+  const e = endDate(l); if(!e) return null;
+  const t = today0(); if(e < t) return { count:0, total:0 };
+  let count;
+  const first = nextDue(l, t) || (l.due ? null : t);
+  if(!first) return { count:0, total:0 };
+  if(l.freq==='weekly') count = Math.floor(daysBetween(first, e) / 7) + 1;
+  else { const k = FREQ[l.freq].months; count = 0; let r = first, i = 0; while(r <= e && i < 1200){ count++; i++; r = addMonths(first, k*i); } }
+  return { count, total: count * (+l.amount || 0) };
 }
 /** Occurrences of a line falling inside [start,end). Weekly/undated monthly lines are spread evenly. */
 function occurrences(l, start, end){
@@ -551,7 +566,8 @@ function occurrences(l, start, end){
   while(r >= start && i > -600){ i--; r = addMonths(d, k*i); }
   while(r < start && i < 600){ i++; r = addMonths(d, k*i); }
   while(r < end && i < 600){ out.push(r); i++; r = addMonths(d, k*i); }
-  return out;
+  const e = endDate(l);
+  return e ? out.filter(x => x <= e) : out;
 }
 function provisionState(l){
   const due = nextDue(l); const amount = +l.amount||0; const saved = Math.max(0, +l.saved||0);
@@ -833,7 +849,8 @@ function timeline(){
     months.forEach(m => {
       const occ = occurrences(l, m.start, m.end);
       const add = (amt, date) => { if(l.kind==='expense'){ m.out += amt; m.items.push({l, amt, date}); } else { m.inc += amt; m.incItems.push({l, amt, date}); } };
-      if(occ===null){ add(yearly(l)/12, null); }
+      const e = endDate(l);
+      if(occ===null){ if(!e || m.start <= e) add(yearly(l)/12, null); }
       else occ.forEach(d => add((+l.amount||0) * f, d));
     });
   });
@@ -844,6 +861,9 @@ function timeline(){
 const $ = s => document.querySelector(s);
 const tile = (catId, size) => { const c = CATS[catId] || CATS.divers; return `<span class="tile" style="background:${c.color}${size?`;width:${size}px;height:${size}px`:''}">${ic(c.icon,2.1)}</span>`; };
 const freqText = l => `${eur(+l.amount)} ${FREQ[l.freq]?.unit||''}`;
+const monthYear = d => `${MONTHS_L[d.getMonth()]} ${d.getFullYear()}`;
+const endText = l => { const e = endDate(l); if(!e) return ''; if(e < today0()) return ` · terminé en ${monthYear(e)}`;
+  const r = remaining(l); return ` · jusqu'en ${monthYear(e)}${r && r.count ? ` · ${r.count} restant${r.count>1?'s':''}` : ''}`; };
 const dueText = d => d ? `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear()!==today0().getFullYear()?' '+d.getFullYear():''}` : '';
 const relDays = d => { const n = daysBetween(today0(), d); return n<=0 ? "aujourd'hui" : n===1 ? 'demain' : n<45 ? `dans ${n} jours` : `dans ${Math.round(n/30.44)} mois`; };
 let lastPeriodRender = state.period, lastScopeRender = 'all';
@@ -932,7 +952,7 @@ function viewHome(){
   const R = 48, C = 2*Math.PI*R; let acc = 0;
   const arcs = exp.map(e => { const f = expTotal ? e.v/expTotal : 0; const gap = exp.length>1 ? 1.6 : 0; const len = Math.max(0, f*C - gap);
     const s = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${e.c.color}" stroke-width="14" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-acc}"/>`; acc += f*C; return s; }).join('');
-  const provLines = state.lines.filter(isProvision);
+  const provLines = state.lines.filter(l => isProvision(l) && isActive(l));
   const provMonth = sum(provLines, l=>provisionState(l).needed);
   const late = provLines.filter(l=>provisionState(l).status==='late').length;
   const up = upcoming(5);
@@ -989,9 +1009,21 @@ function viewHome(){
           <span class="v num" style="color:${l.kind==='income'?'var(--green)':'var(--fg)'}">${l.kind==='income'?'+':''}${eur((+l.amount)*shareOf(l))}</span></button>`).join('')
           : '<div class="row"><span></span><span class="muted">Ajoute une date d\'échéance à tes lignes pour les voir ici.</span><span></span></div>'}</div>
       </section>
+      ${endingSoon()}
       ${miniTimeline()}
     </div>
   </div>`}`;
+}
+function endingSoon(){
+  const t = today0(), lim = addMonths(t, 12), P_ = PERIODS[state.period];
+  const L = state.lines.filter(l => inScope(l) && endDate(l) && endDate(l) <= lim).sort((a,b) => endDate(a) - endDate(b));
+  if(!L.length) return '';
+  const freed = sum(L.filter(l => l.kind==='expense'), l => perPeriod(l));
+  return `<section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Bientôt terminés</h2>${freed ? `<span class="muted small">+${eur(freed)} ${P_.unit} libérés</span>` : ''}</div>
+    <div class="list">${L.map(l => { const e = endDate(l), r = remaining(l);
+      return `<button class="row press" data-edit="${esc(l.id)}">${tile(l.cat)}
+        <span style="min-width:0"><div class="t">${esc(l.label)}</div><div class="s">Dernier paiement en ${monthYear(e)}${r && r.count ? ` · reste ${eur(r.total * shareOf(l), 0)}` : ''}</div></span>
+        <span class="v num" style="color:${l.kind==='expense'?'var(--green)':'var(--orange)'}">${l.kind==='expense'?'+':'−'}${eur(perPeriod(l))}<small>${P_.unit}</small></span></button>`; }).join('')}</div></section>`;
 }
 function miniTimeline(){
   const tl = timeline(); const avg = sum(tl,m=>m.out)/12; const max = Math.max(...tl.map(m=>m.out), avg) || 1;
@@ -1026,10 +1058,13 @@ function viewBudget(){
     return `<div class="group-h"><span>${g.c.label}</span><span class="num">${eur(g.v)}</span></div>
     <div class="list">${items.map(l=>{ const d = nextDue(l);
       return `<button class="row wide press" data-edit="${esc(l.id)}">${tile(l.cat)}
-        <span style="min-width:0"><div class="t">${esc(l.label)}${proLabel(l)}</div><div class="s">${freqText(l)}${d && l.freq!=='monthly'?' · '+dueText(d):''}</div></span>
+        <span style="min-width:0"><div class="t">${esc(l.label)}${proLabel(l)}</div><div class="s">${freqText(l)}${d && l.freq!=='monthly' && !endDate(l)?' · '+dueText(d):''}${endText(l)}</div></span>
         <span class="meta">${FREQ[l.freq].label}</span><span class="meta num">${d?dueText(d):'—'}</span>
         <span class="v num${anim}">${eur(perPeriod(l))}<small>${P_.unit}</small></span></button>`; }).join('')}</div>`;
   }).join('')}
+  ${(() => { const done = state.lines.filter(l => l.kind===k && !isActive(l) && shareOf(l) > 0); if(!done.length) return '';
+    return `<div class="group-h"><span>Terminés</span><span>${done.length}</span></div><div class="list" style="opacity:.62">${done.map(l => `<button class="row press" data-edit="${esc(l.id)}">${tile(l.cat)}
+      <span style="min-width:0"><div class="t">${esc(l.label)}</div><div class="s">${freqText(l)}${endText(l)}</div></span><span class="v num muted">${eur(0)}<small>${P_.unit}</small></span></button>`).join('')}</div>`; })()}
   ${lines.length===0?`<div class="card empty"><h2>Aucun ${k==='expense'?'poste de dépense':'revenu'}</h2><p>Ajoute-en un pour l'intégrer au budget.</p><button class="btn primary press" data-act="new" data-kind="${k}">${ic('plus',2.4)}Ajouter</button></div>`:''}`}`;
 }
 
@@ -1084,7 +1119,7 @@ function viewTimeline(){
 }
 
 function viewProvisions(){
-  const L = state.lines.filter(isProvision).map(l=>({l, s:provisionState(l)})).sort((a,b)=>(a.s.due||9e15)-(b.s.due||9e15));
+  const L = state.lines.filter(l => isProvision(l) && isActive(l)).map(l=>({l, s:provisionState(l)})).sort((a,b)=>(a.s.due||9e15)-(b.s.due||9e15));
   const need = sum(L, x=>x.s.needed), saved = sum(L,x=>x.s.saved), target = sum(L,x=>x.s.amount);
   const smooth = sum(L, x=>x.s.smooth);
   return `${header('Dépenses irrégulières lissées', 'Provisions', false)}
@@ -1291,11 +1326,27 @@ function sheetDates(){
   const s = sheet; const prov = s.kind==='expense' && (s.freq==='once' || (FREQ[s.freq].months||0)>=2);
   const lab = s.freq==='once' ? 'Date prévue' : s.freq==='weekly' ? 'Premier paiement' : 'Prochaine échéance';
   $('#f-dates').innerHTML = `<div class="frow"><span>${lab}</span><input type="date" id="f-due" value="${esc(s.due||'')}"></div>
+    ${s.freq!=='once' ? `<div class="frow"><span>Fin des paiements</span><input type="date" id="f-end" value="${esc(s.end||'')}" aria-describedby="f-end-info"></div>` : ''}
     ${prov?`<div class="frow"><span>Déjà mis de côté</span><input id="f-saved" inputmode="decimal" placeholder="0 €" value="${s.saved? esc(String(s.saved).replace('.',',')) : ''}"></div>`:''}`;
   const hint = $('#f-hint'); if(hint) hint.remove();
+  const ei = $('#f-end-info'); if(ei) ei.remove();
   $('#f-dates').insertAdjacentHTML('afterend', `<p class="hint" id="f-hint">${prov ? 'Une provision sera créée : l\'appli calcule combien mettre de côté chaque mois pour être prêt à l\'échéance.' : s.freq==='weekly' ? 'Les dépenses hebdomadaires sont converties sur 52 semaines par an.' : 'La date est facultative. Elle sert à l\'échéancier.'}</p>`);
-  const due = $('#f-due'); due.addEventListener('change', ()=> sheet.due = due.value);
+  $('#f-dates').insertAdjacentHTML('afterend', `<p class="hint" id="f-end-info" style="margin-top:-8px"></p>`);
+  const due = $('#f-due'); due.addEventListener('change', ()=>{ sheet.due = due.value; sheetEndInfo(); });
+  const en = $('#f-end'); if(en) en.addEventListener('change', ()=>{ sheet.end = en.value; sheetEndInfo(); });
+  sheetEndInfo();
   const sv = $('#f-saved'); if(sv) sv.addEventListener('input', ()=>{ const v = parseAmount(sv.value); sheet.saved = isFinite(v)? v : 0; });
+}
+function sheetEndInfo(){
+  const el = $('#f-end-info'); if(!el || !sheet) return;
+  const s = sheet, v = parseAmount(s.amountStr);
+  if(s.freq==='once'){ el.textContent = ''; return; }
+  if(!s.end){ el.textContent = 'Fin des paiements : facultative. Pour un crédit, un leasing ou une location, indique la date du dernier paiement.'; return; }
+  if(s.due && s.end < s.due){ el.innerHTML = '<span style="color:var(--red)">La fin des paiements est avant la prochaine échéance.</span>'; return; }
+  const r = remaining({ freq:s.freq, due:s.due, end:s.end, amount: isFinite(v) ? v : 0 });
+  const e = parseDate(s.end);
+  el.textContent = e < today0() ? `Paiements terminés en ${monthYear(e)} : la ligne ne compte plus dans le budget.`
+    : r && r.count ? `${r.count} paiement${r.count>1?'s':''} restant${r.count>1?'s':''} jusqu'en ${monthYear(e)}${isFinite(v) && v>0 ? `, soit ${eur(r.total)} au total` : ''}.` : `Dernier paiement en ${monthYear(e)}.`;
 }
 function sheetConv(){
   const s = sheet; const v = parseAmount(s.amountStr); const el = $('#f-conv');
@@ -1304,6 +1355,7 @@ function sheetConv(){
   const parts = [['week','/ sem.'],['month','/ mois'],['year','/ an']].filter(([p])=>!(s.freq==='weekly'&&p==='week')&&!(s.freq==='monthly'&&p==='month')&&!(s.freq==='annual'&&p==='year'));
   el.innerHTML = parts.map(([p,u])=>`<span class="pill">≈ <b class="num">${eur(y/PERIODS[p].div)}</b> ${u}</span>`).join('');
   $('#f-save').disabled = !(s.label||'').trim();
+  sheetEndInfo();
   const eq = $('#f-pro-eq'); if(eq && s.nature==='mixed') eq.textContent = `≈ ${eur(y*s.pro/100)} pro et ${eur(y*(100-s.pro)/100)} privé par an`;
 }
 function bindSheet(){
@@ -1325,8 +1377,9 @@ async function saveSheet(){
   const amount = parseAmount(s.amountStr);
   if(!isFinite(amount) || amount<=0){ toast('Indique un montant'); $('#f-amount').focus(); return; }
   if(!(s.label||'').trim()){ toast('Donne un nom à cette ligne'); $('#f-label').focus(); return; }
+  if(s.end && s.due && s.end < s.due && s.freq!=='once'){ toast('La fin des paiements doit être après la prochaine échéance'); return; }
   const line = { id:s.id, kind:s.kind, label:s.label.trim(), amount: Math.round(amount*100)/100, freq:s.freq,
-    cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.due||'', saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
+    cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.due||'', end: s.freq==='once' ? '' : (s.end||''), saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
     pro: s.nature==='private' ? 0 : s.nature==='pro' ? 100 : Math.min(95, Math.max(5, Math.round(+s.pro||50))),
     createdAt: s.createdAt || Date.now() };
   if(s.example) line.example = true;

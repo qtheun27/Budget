@@ -89,7 +89,7 @@ service cloud.firestore {
     }
 
     function validLine(d) {
-      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'saved', 'pro', 'example', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'end', 'saved', 'pro', 'example', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['kind', 'label', 'amount', 'freq', 'cat'])
         && d.kind in ['income', 'expense']
         && d.label is string && d.label.size() > 0 && d.label.size() <= 60
@@ -97,6 +97,7 @@ service cloud.firestore {
         && d.freq in ['weekly', 'monthly', 'bimonthly', 'quarterly', 'semiannual', 'annual', 'once']
         && d.cat is string && d.cat.size() <= 40
         && (!('due' in d) || (d.due is string && d.due.size() <= 10))
+        && (!('end' in d) || (d.end is string && d.end.size() <= 10))
         && (!('saved' in d) || ((d.saved is int || d.saved is float) && d.saved >= 0 && d.saved < 10000000))
         && (!('pro' in d) || (d.pro is int && d.pro >= 0 && d.pro <= 100))
         && (!('example' in d) || d.example is bool)

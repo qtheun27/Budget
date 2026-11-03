@@ -151,6 +151,12 @@ test('part professionnelle : 0 à 100 acceptée, hors limites refusée', async (
   await assertFails(setDoc(doc(db, 'households/h1/lines/p3'), { ...line, pro: 140 }));
   await assertFails(setDoc(doc(db, 'households/h1/lines/p4'), { ...line, pro: 'beaucoup' }));
 });
+test('date de fin des paiements acceptée, format invalide refusé', async () => {
+  const db = as('A');
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/e1'), { ...line, freq: 'monthly', end: '2028-03-01' }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/e2'), { ...line, end: 20280301 }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/e3'), { ...line, end: 'x'.repeat(30) }));
+});
 test('un membre modifie son profil (prénom, photo)', async () => {
   const db = as('A');
   await assertSucceeds(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Quentin', photo: 'data:image/jpeg;base64,AAAA' } }));
