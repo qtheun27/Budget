@@ -165,6 +165,18 @@ test('plusieurs prélèvements par mois et montant variable', async () => {
   await assertFails(setDoc(doc(db, 'households/h1/lines/m3'), { ...line, freq: 'multi', parts: Array(13).fill({ day: 1, amount: 1 }) }));
   await assertFails(setDoc(doc(db, 'households/h1/lines/m4'), { ...line, variable: 'oui' }));
 });
+test('catégories du foyer : membres seulement, champs validés', async () => {
+  const cat = { label: 'Animaux', color: '#FF9500', icon: 'paw', kind: 'expense', pro: false, kw: ['croquettes', 'vétérinaire'], hidden: false, order: 210, custom: true };
+  await assertSucceeds(setDoc(doc(as('A'), 'households/h1/categories/c1'), cat));
+  await assertSucceeds(setDoc(doc(as('A'), 'households/h1/categories/enfants'), { hidden: true, order: 50 }));
+  await assertSucceeds(getDoc(doc(as('A'), 'households/h1/categories/c1')));
+  await assertFails(getDoc(doc(as('C'), 'households/h1/categories/c1')));
+  await assertFails(setDoc(doc(as('C'), 'households/h1/categories/c2'), cat));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/categories/c3'), { ...cat, color: 'red' }));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/categories/c4'), { ...cat, label: '' }));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/categories/c5'), { ...cat, hack: 1 }));
+  await assertSucceeds(deleteDoc(doc(as('A'), 'households/h1/categories/c1')));
+});
 test('un membre modifie son profil (prénom, photo)', async () => {
   const db = as('A');
   await assertSucceeds(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Quentin', photo: 'data:image/jpeg;base64,AAAA' } }));

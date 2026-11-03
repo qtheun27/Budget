@@ -65,6 +65,12 @@ service cloud.firestore {
 
       allow delete: if false;
 
+      // ---------- catégories du foyer (fournies modifiées ou créées) ----------
+      match /categories/{catId} {
+        allow read, delete: if isMember(hid);
+        allow create, update: if isMember(hid) && validCat(request.resource.data);
+      }
+
       // ---------- lignes de budget ----------
       match /lines/{lineId} {
         allow read: if isMember(hid);
@@ -88,6 +94,19 @@ service cloud.firestore {
         && (!('name' in p) || (p.name is string && p.name.size() <= 40))
         && (!('photo' in p) || (p.photo is string && p.photo.size() <= 80000
             && (p.photo.matches('^data:image/(jpeg|png|webp);base64,.*') || p.photo.matches('^https://.*'))));
+    }
+
+    function validCat(c) {
+      return c.keys().hasOnly(['label', 'color', 'icon', 'kind', 'pro', 'kw', 'hidden', 'order', 'custom'])
+        && (!('label' in c) || (c.label is string && c.label.size() > 0 && c.label.size() <= 30))
+        && (!('color' in c) || (c.color is string && c.color.matches('^#[0-9A-Fa-f]{6}$')))
+        && (!('icon' in c) || (c.icon is string && c.icon.size() <= 20))
+        && (!('kind' in c) || c.kind in ['income', 'expense'])
+        && (!('pro' in c) || c.pro is bool)
+        && (!('kw' in c) || (c.kw is list && c.kw.size() <= 40))
+        && (!('hidden' in c) || c.hidden is bool)
+        && (!('order' in c) || c.order is int || c.order is float)
+        && (!('custom' in c) || c.custom is bool);
     }
 
     function validLine(d) {

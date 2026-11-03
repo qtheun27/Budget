@@ -373,6 +373,33 @@ img.avatar{object-fit:cover;background:var(--fill)}
 .prow .prm svg{width:16px;height:16px}
 .parts-foot{display:flex;justify-content:space-between;align-items:center;padding:6px 16px 8px;font-size:14px}
 .approx{color:var(--fg2);font-weight:500;margin-right:2px}
+
+/* ---------- catégories ---------- */
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.swatch{aspect-ratio:1;border-radius:50%;max-width:44px;width:100%;justify-self:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--fg)}
+.icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px}
+.icon-pick{height:44px;border-radius:12px;background:var(--card);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--fg2)}
+.icon-pick svg{width:21px;height:21px}
+.icon-pick[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.cat-preview{display:flex;align-items:center;gap:12px;justify-content:center;padding:8px 0 2px;font-weight:650;font-size:18px}
+.cat-preview .tile{width:44px;height:44px;border-radius:13px}
+.cat-preview .tile svg{width:24px;height:24px}
+.catlist .row{grid-template-columns:auto minmax(0,1fr) auto}
+.cat-acts{display:flex;gap:6px;align-items:center}
+.mini{width:34px;height:34px;border-radius:10px;background:var(--fill2);display:grid;place-items:center;color:var(--fg2)}
+.mini svg{width:17px;height:17px}
+.mini:disabled{opacity:.3}
+.chip.add{background:transparent;box-shadow:inset 0 0 0 1.5px var(--sep);color:var(--accent)}
+.kwchips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 4px}
+.kwchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 11px;border-radius:999px;background:var(--fill2);font-size:14px}
+.kwchip button{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:var(--fg2)}
+.kwchip button svg{width:12px;height:12px}
+.pend{display:flex;align-items:center;gap:6px;min-width:0}
+.pend span{font-size:13px;color:var(--fg2);white-space:nowrap}
+.prow .prow2{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:8px}
+.prow .prow2 input.plabel{grid-column:auto}
+.prow .ended{grid-column:1 / -1;font-size:12.5px;color:var(--fg2)}
 </style>
 
 <div id="app">
@@ -459,6 +486,31 @@ const P = {
   copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
   store:'<path d="M4.5 9.5 6 4.5h12l1.5 5"/><path d="M4.5 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/><path d="M5.5 11.5v8h13v-8M10 19.5V15h4v4.5"/>',
   camera:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.3"/>',
+  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  wifi:'<path d="M3.5 9.5a12 12 0 0 1 17 0M6.5 12.7a7.5 7.5 0 0 1 11 0M9.5 15.8a3.2 3.2 0 0 1 5 0"/><circle cx="12" cy="19" r=".9"/>',
+  paw:'<circle cx="7" cy="10" r="1.8"/><circle cx="17" cy="10" r="1.8"/><circle cx="9.8" cy="6" r="1.8"/><circle cx="14.2" cy="6" r="1.8"/><path d="M12 12.5c-3 0-5 3.5-5 5.3 0 1.5 1.2 2.2 2.6 2.2 1 0 1.6-.6 2.4-.6s1.4.6 2.4.6c1.4 0 2.6-.7 2.6-2.2 0-1.8-2-5.3-5-5.3z"/>',
+  plane:'<path d="M10.5 13.5 3.5 11l1.5-1.5 7.5.5 4-4.5c1-1 2.6-1.3 3-1s0 2-1 3l-4.5 4 .5 7.5-1.5 1.5-2.5-7z"/>',
+  fuel:'<path d="M5 20.5V5a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 14 5v15.5M3.5 20.5h12M5 10h9"/><path d="M14 8.5h1.5a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/>',
+  tool:'<path d="M14.5 6.5a4 4 0 0 0 4.8 5.4L12 19.2a2.1 2.1 0 0 1-3-3l7.3-7.3a4 4 0 0 0-1.8-2.4z"/><path d="M14.5 6.5 17 4l3 3-2.5 2.5"/>',
+  book:'<path d="M4.5 5.5A2 2 0 0 1 6.5 3.5h12v15h-12a2 2 0 0 0-2 2z"/><path d="M4.5 20.5a2 2 0 0 1 2-2h12v2h-12a2 2 0 0 1-2-2M9 7.5h6"/>',
+  shirt:'<path d="m8.5 3.5-5 3 2 4 2-1v11h9v-11l2 1 2-4-5-3a3.5 3.5 0 0 1-7 0z"/>',
+  pill:'<rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="m9.5 9.5 5 5"/>',
+  dumbbell:'<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  cup:'<path d="M5 8.5h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5v2M11 3.5v2"/>',
+  train:'<rect x="5.5" y="3.5" width="13" height="13" rx="3"/><path d="M5.5 10.5h13M9 16.5l-2 4M15 16.5l2 4"/><circle cx="9" cy="13.5" r=".8"/><circle cx="15" cy="13.5" r=".8"/>',
+  bike:'<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9l2 7h4M13.5 5.5h2"/>',
+  music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+  leaf:'<path d="M5 19c0-8 5-13.5 14.5-14-.3 9.5-5.8 14.5-13.8 14.5"/><path d="M5 19c3-4 6-6.5 9-8"/>',
+  card:'<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/>',
+  umbrella:'<path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5h-17A8.5 8.5 0 0 1 12 3.5zM12 12v6.5a2 2 0 0 1-4 0"/>',
+  grad:'<path d="m12 5 9.5 4.5L12 14 2.5 9.5zM6.5 11.5v4c1.5 1.7 3.4 2.5 5.5 2.5s4-.8 5.5-2.5v-4M21.5 9.5v5"/>',
+  baby:'<circle cx="12" cy="8" r="4"/><path d="M6 20c.7-3.4 3-5.5 6-5.5s5.3 2.1 6 5.5M10.5 7.5h.01M13.5 7.5h.01"/>',
+  eye:'<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+  eyeoff:'<path d="M4 4l16 16M9.9 6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.3M6.4 7.6C3.9 9.3 2.5 12 2.5 12s3.5 6.5 9.5 6.5c1.6 0 3-.5 4.3-1.1M10 10.1a2.8 2.8 0 0 0 3.9 3.9"/>',
+  up:'<path d="m6 15 6-6 6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  pencil:'<path d="M15.5 4.5l4 4L8 20H4v-4z"/>',
+  tag:'<path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.3"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/>'
 };
 const ic = (n, sw=1.9) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
@@ -484,6 +536,26 @@ const CATS = {
   pro:{label:'Activité indépendante',color:'#7D5BD0',icon:'store',kind:'income',pro:true,kw:['facture','client','honoraire','indépendant','independant','complémentaire','complementaire','freelance','mission']},
   autres:{label:'Autres revenus',color:'#FF9500',icon:'coin',kind:'income',kw:['loyer perçu','location','remboursement','vente']}
 };
+/* Catégories : celles fournies par l'appli (ci-dessus) + les réglages et créations du foyer. */
+const BASE_CATS = JSON.parse(JSON.stringify(CATS));
+const BASE_ORDER = Object.keys(BASE_CATS);
+const CAT_COLORS = ['#5E5CE6','#0A84FF','#30B0C7','#00A89D','#34C759','#A3C23A','#F5A623','#FF9500','#FF453A','#FF4F8B','#AF52DE','#8E8E93'];
+const CAT_ICONS = ['house','bolt','shield','cart','car','fuel','train','bike','plane','star','baby','heart','pill','play','phone','wifi','sun','dumbbell','cup','music','book','grad','shirt','paw','leaf','tool','doc','bank','coin','card','umbrella','gift','case','store','tag','dots'];
+let catDocs = {};   // id -> réglages enregistrés (catégories fournies modifiées ou créées)
+function rebuildCats(){
+  Object.keys(CATS).forEach(k => delete CATS[k]);
+  const merged = {};
+  BASE_ORDER.forEach((id, i) => { merged[id] = { ...BASE_CATS[id], kw:[...BASE_CATS[id].kw], userKw:[], order:i*10, custom:false, hidden:false }; });
+  Object.entries(catDocs).forEach(([id, d]) => {
+    const b = merged[id];
+    if(b){ Object.assign(b, { label:d.label||b.label, color:d.color||b.color, icon:d.icon||b.icon, hidden:!!d.hidden, userKw:d.kw||[], order: d.order ?? b.order, pro: d.pro ?? b.pro }); }
+    else if(d.label && (d.kind==='income' || d.kind==='expense')) merged[id] = { label:d.label, color:d.color||'#8E8E93', icon:d.icon||'tag', kind:d.kind, pro:!!d.pro, kw:[], userKw:d.kw||[], order:d.order ?? 9999, custom:true, hidden:!!d.hidden };
+  });
+  Object.entries(merged).sort((a,b) => a[1].order - b[1].order).forEach(([id, c]) => { CATS[id] = c; });
+}
+const catsOf = (kind, withHidden = false) => Object.keys(CATS).filter(k => CATS[k].kind===kind && (withHidden || !CATS[k].hidden));
+const catUse = id => state.lines.filter(l => l.cat===id).length;
+rebuildCats();
 const FREQ = {
   weekly:{label:'Hebdo',perYear:52,months:null,unit:'/ sem.'},
   monthly:{label:'Mensuel',perYear:12,months:1,unit:'/ mois'},
@@ -517,7 +589,7 @@ const hasPro = () => state.lines.some(l => proPart(l) > 0);
 const scopeNow = () => hasPro() ? state.scope : 'all';
 /** Part de la ligne qui compte dans la vue choisie (Tout / Privé / Pro). */
 const shareOf = (l, sc = scopeNow()) => sc==='pro' ? proPart(l) : sc==='private' ? 1 - proPart(l) : 1;
-const yearlyRaw = l => (+l.amount||0) * (FREQ[l.freq]?.perYear || 0);
+const yearlyRaw = l => (l.freq==='multi' && partsOf(l).length ? multiTotal(l) : (+l.amount||0)) * (FREQ[l.freq]?.perYear || 0);
 const yearly = (l, sc) => yearlyRaw(l) * shareOf(l, sc);
 const perPeriod = (l, p=state.period, sc) => yearly(l, sc) / PERIODS[p].div;
 const inScope = (l, sc) => shareOf(l, sc) > 0 && isActive(l);
@@ -545,9 +617,12 @@ const parseAmount = s => { const v = parseFloat(String(s).replace(/\s| /g,'').r
 /** Date de fin des paiements (crédit, location…), ou null si sans fin. */
 const endDate = l => (l.freq!=='once' && l.end) ? parseDate(l.end) : null;
 /** Une ligne est active tant que sa date de fin n'est pas passée. */
-const isActive = (l, at = today0()) => { const e = endDate(l); return !e || e >= at; };
+const isActive = (l, at = today0()) => { const e = endDate(l); if(e && e < at) return false; return l.freq!=='multi' || !partsOf(l).length || activeParts(l, at).length > 0; };
 /* Plusieurs prélèvements par mois : chaque prélèvement a son jour, son montant et un libellé facultatif. */
 const partsOf = l => (Array.isArray(l.parts) ? l.parts : []).filter(p => +p.day >= 1 && +p.day <= 31 && +p.amount > 0);
+const partActive = (p, at = today0()) => !p.end || parseDate(p.end) >= at;
+const activeParts = (l, at) => partsOf(l).filter(p => partActive(p, at));
+const multiTotal = (l, at) => sum(activeParts(l, at), p => +p.amount);
 const dayIn = (y, m, day) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
 /** Prélèvements d'une ligne « plusieurs fois par mois » compris dans [start, end). */
 function multiOccurrences(l, start, end){
@@ -556,12 +631,12 @@ function multiOccurrences(l, start, end){
   let y = start.getFullYear(), m = start.getMonth();
   for(let i = 0; i < 400; i++){
     if(new Date(y, m, 1) >= end) break;
-    ps.forEach(p => { const d = dayIn(y, m, +p.day); if(d >= start && d < end && (!e || d <= e)) out.push({ date:d, amt:+p.amount, part:p }); });
+    ps.forEach(p => { const d = dayIn(y, m, +p.day), pe = p.end ? parseDate(p.end) : null; if(d >= start && d < end && (!e || d <= e) && (!pe || d <= pe)) out.push({ date:d, amt:+p.amount, part:p }); });
     if(++m > 11){ m = 0; y++; }
   }
   return out.sort((a,b) => a.date - b.date || b.amt - a.amt);
 }
-const daysText = l => { const ds = [...new Set(partsOf(l).map(p => +p.day))].sort((a,b) => a-b); return ds.length > 1 ? `les ${ds.slice(0,-1).join(', ')} et ${ds.at(-1)}` : ds.length ? `le ${ds[0]}` : ''; };
+const daysText = l => { const ds = [...new Set(activeParts(l).map(p => +p.day))].sort((a,b) => a-b); return ds.length > 1 ? `les ${ds.slice(0,-1).join(', ')} et ${ds.at(-1)}` : ds.length ? `le ${ds[0]}` : ''; };
 function nextDue(l, from = today0()){
   if(l.freq==='multi'){ const o = multiOccurrences(l, from, addMonths(from, 2))[0]; return o ? o.date : null; }
   const d = parseDate(l.due); if(!d) return null;
@@ -573,6 +648,13 @@ function nextDue(l, from = today0()){
 }
 /** Paiements restants jusqu'à la date de fin : nombre et montant. */
 function remaining(l){
+  if(l.freq==='multi' && !endDate(l)){
+    const t = today0(), ended = partsOf(l).filter(p => p.end);
+    if(!ended.length) return null;
+    const last = ended.map(p => parseDate(p.end)).reduce((a,b) => a > b ? a : b);
+    const occ = multiOccurrences({ ...l, parts: ended }, t, new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1));
+    return { count: occ.length, total: sum(occ, o => o.amt), last };
+  }
   const e = endDate(l); if(!e) return null;
   const t = today0(); if(e < t) return { count:0, total:0 };
   if(l.freq==='multi'){ const occ = multiOccurrences(l, t, new Date(e.getFullYear(), e.getMonth(), e.getDate() + 1)); return { count: occ.length, total: sum(occ, o => o.amt) }; }
@@ -611,9 +693,30 @@ function provisionState(l){
   const status = ready ? 'ready' : expected==null ? 'neutral' : (saved + 1 >= expected ? 'ok' : 'late');
   return {due, days, monthsLeft, saved, amount, remaining, needed, smooth, expected, status, pct: amount ? Math.min(1, saved/amount) : 0};
 }
-function suggestCat(label, kind){
-  const s = (label||'').toLowerCase(); if(!s.trim()) return null;
-  for(const [id,c] of Object.entries(CATS)){ if(c.kind!==kind) continue; if(c.kw.some(k=>s.includes(k))) return id; }
+/* Détection de catégorie, du plus fort au plus faible :
+   1. ce que le foyer a déjà classé (apprentissage sur les lignes existantes, suit chaque changement),
+   2. les mots-clés ajoutés par le foyer, 3. les mots-clés de départ. */
+const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const STOP = new Set(['les','des','une','pour','avec','sur','par','aux','mon','mes','ton','nos','vos','the','and','frais','paiement','facture','mois']);
+const tokens = s => norm(s).split(/[^a-z0-9]+/).filter(t => t.length >= 3 && !STOP.has(t) && !/^\d+$/.test(t));
+function suggestCat(label, kind, exceptId){
+  const s = norm(label).trim(); if(!s) return null;
+  const tk = tokens(label); const ok = id => CATS[id] && CATS[id].kind===kind && !CATS[id].hidden;
+  // 1. lignes déjà classées
+  let best = null;
+  state.lines.forEach(l => {
+    if(l.id===exceptId || l.kind!==kind || !ok(l.cat)) return;
+    const lt = tokens(l.label); let sc = norm(l.label).trim()===s ? 5 : 0;
+    tk.forEach(t => { if(lt.includes(t)) sc += 2; else if(t.length >= 4 && lt.some(x => x.startsWith(t))) sc += 1; });
+    if(sc > 0 && (!best || sc > best.sc || (sc===best.sc && (l.updatedAt||0) > (best.at||0)))) best = { id:l.cat, sc, at:l.updatedAt||0, why:`comme « ${l.label} »` };
+  });
+  if(best) return best;
+  // 2. et 3. mots-clés
+  for(const pass of ['userKw','kw']) for(const id of Object.keys(CATS)){
+    if(!ok(id)) continue;
+    const k = (CATS[id][pass]||[]).find(k => k && s.includes(norm(k)));
+    if(k) return { id, why: pass==='userKw' ? `mot-clé « ${k} »` : '' };
+  }
   return null;
 }
 
@@ -693,6 +796,7 @@ const Store = {
       if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; }
       state.mode = 'cloud'; renderData();
     }, err => { clearTimeout(this.slowT); state.mode = 'error'; state.err = err; render(); });
+    db.collection('categories').onSnapshot(snap => { catDocs = {}; snap.docs.forEach(d => { catDocs[d.id] = d.data(); }); rebuildCats(); renderData(); }, () => {});
     db.doc('meta/household').onSnapshot(s => { if(s.exists){ state.meta = {...state.meta, ...s.data()}; renderData(); } }, ()=>{});
   },
 
@@ -711,7 +815,7 @@ const Store = {
   },
   stop(){ [...this.unsubs, ...this.hUnsubs].forEach(u => { try { u(); } catch {} }); this.unsubs = []; this.hUnsubs = []; },
   onUser(u){
-    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false;
+    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false; catDocs = {}; rebuildCats();
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
     state.user = { uid:u.uid, email:u.email || '' }; state.mode = 'loading'; render();
     const { S } = F;
@@ -739,6 +843,9 @@ const Store = {
       this.autoProfile();
       renderData();
     }, onErr));
+    this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'categories'), snap => {
+      catDocs = {}; snap.docs.forEach(d => { catDocs[d.id] = d.data(); }); rebuildCats(); renderData();
+    }, () => {}));
     this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'lines'), { includeMetadataChanges:true }, snap => {
       state.lines = snap.docs.map(d => ({ id:d.id, ...d.data() }));
       state.offline = snap.metadata.fromCache;
@@ -783,6 +890,7 @@ const Store = {
     const saved = ls.get('bf.lines', null);
     state.lines = saved ?? TEMPLATE.map(t => ({ id: uid(), saved:0, example:true, ...t }));
     state.meta = ls.get('bf.meta', state.meta);
+    catDocs = ls.get('bf.cats', {}) || {}; rebuildCats();
     state.mode = 'local'; render();
   },
   persistLocal(){ ls.set('bf.lines', state.lines); },
@@ -811,6 +919,20 @@ const Store = {
     if(F && state.hid){ for(let i=0; i<ids.length; i+=400){ const b = F.S.writeBatch(F.db); ids.slice(i,i+400).forEach(id => b.delete(this.lineRef(id))); this.write(b.commit()); } return true; }
     if(DB){ for(const id of ids) await this.remove(id); return true; }
     const set = new Set(ids); state.lines = state.lines.filter(l=>!set.has(l.id)); this.persistLocal(); render(); return true;
+  },
+  /** Enregistre les réglages d'une catégorie (fournie ou créée), partagés par tout le foyer. */
+  saveCat(id, data){
+    const clean = {}; ['label','color','icon','kind','pro','kw','hidden','order','custom'].forEach(k => { if(data[k] !== undefined) clean[k] = data[k]; });
+    catDocs[id] = clean; rebuildCats(); render();
+    if(F && state.hid) return this.write(F.S.setDoc(F.S.doc(F.db, 'households', state.hid, 'categories', id), clean));
+    if(DB){ DB.collection('categories').doc(id).set(clean).catch(e => this.fail(e)); return true; }
+    ls.set('bf.cats', catDocs); return true;
+  },
+  removeCat(id){
+    delete catDocs[id]; rebuildCats(); render();
+    if(F && state.hid) return this.write(F.S.deleteDoc(F.S.doc(F.db, 'households', state.hid, 'categories', id)));
+    if(DB){ DB.collection('categories').doc(id).delete().catch(e => this.fail(e)); return true; }
+    ls.set('bf.cats', catDocs); return true;
   },
   async saveMeta(patch){
     state.meta = {...state.meta, ...patch};
@@ -926,11 +1048,11 @@ function timeline(){
 
 /* ================= rendering ================= */
 const $ = s => document.querySelector(s);
-const tile = (catId, size) => { const c = CATS[catId] || CATS.divers; return `<span class="tile" style="background:${c.color}${size?`;width:${size}px;height:${size}px`:''}">${ic(c.icon,2.1)}</span>`; };
+const tile = (catId, size) => { const c = CATS[catId] || CATS.divers || BASE_CATS.divers; return `<span class="tile" style="background:${c.color}${size?`;width:${size}px;height:${size}px`:''}">${ic(c.icon,2.1)}</span>`; };
 const approx = l => l.variable ? '<span class="approx">≈</span>' : '';
 const partName = p => p && p.label ? ` · ${esc(p.label)}` : '';
 const freqText = l => l.freq==='multi'
-  ? `${approx(l)}${eur(+l.amount)} / mois · ${partsOf(l).length} prélèvement${partsOf(l).length>1?'s':''} ${daysText(l)}`
+  ? `${approx(l)}${eur(multiTotal(l))} / mois · ${activeParts(l).length} prélèvement${activeParts(l).length>1?'s':''} ${daysText(l)}`
   : `${approx(l)}${eur(+l.amount)} ${FREQ[l.freq]?.unit||''}`;
 const monthYear = d => `${MONTHS_L[d.getMonth()]} ${d.getFullYear()}`;
 const endText = l => { const e = endDate(l); if(!e) return ''; if(e < today0()) return ` · terminé en ${monthYear(e)}`;
@@ -941,7 +1063,7 @@ let lastPeriodRender = state.period, lastScopeRender = 'all';
 
 function renderNav(){
   const cur = state.route;
-  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
+  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur || (r.id==='foyer' && cur==='categories')?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
   const t = ROUTES.slice(0,4).map(r=>`<a class="tab press" href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`);
   t.splice(2,0,`<button class="tab-add press" data-act="new" aria-label="Nouvelle ligne">${ic('plus',2.4)}</button>`);
   $('#tabbar').innerHTML = t.join('');
@@ -1066,7 +1188,7 @@ function viewHome(){
         <div class="donut-wrap">
           <div class="donut"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--fill2)" stroke-width="14"/>${arcs}</svg>
             <div class="donut-c"><div><b class="num">${eur(expTotal,0)}</b><span>${P_.noun}</span></div></div></div>
-          <div class="cats">${exp.slice(0,6).map(e=>`<div class="catrow"><i class="dot" style="background:${e.c.color};margin:0"></i><span class="nm">${e.c.label}<span class="pc">${expTotal?Math.round(e.v/expTotal*100):0}&nbsp;%</span></span><b class="num">${eur(e.v)}</b></div>`).join('')}
+          <div class="cats">${exp.slice(0,6).map(e=>`<div class="catrow"><i class="dot" style="background:${e.c.color};margin:0"></i><span class="nm">${esc(e.c.label)}<span class="pc">${expTotal?Math.round(e.v/expTotal*100):0}&nbsp;%</span></span><b class="num">${eur(e.v)}</b></div>`).join('')}
           ${exp.length>6?`<div class="catrow muted small"><i></i><span>+ ${exp.length-6} autres catégories</span><span></span></div>`:''}</div>
         </div>
       </section>
@@ -1087,14 +1209,21 @@ function viewHome(){
 }
 function endingSoon(){
   const t = today0(), lim = addMonths(t, 12), P_ = PERIODS[state.period];
-  const L = state.lines.filter(l => inScope(l) && endDate(l) && endDate(l) <= lim).sort((a,b) => endDate(a) - endDate(b));
-  if(!L.length) return '';
-  const freed = sum(L.filter(l => l.kind==='expense'), l => perPeriod(l));
+  const items = [];
+  state.lines.filter(l => inScope(l)).forEach(l => {
+    if(endDate(l) && endDate(l) <= lim) items.push({ l, e:endDate(l), per: perPeriod(l), r: remaining(l) });
+    else if(l.freq==='multi') activeParts(l).filter(p => p.end && parseDate(p.end) <= lim).forEach(p => {
+      const occ = multiOccurrences({ ...l, parts:[p] }, t, new Date(parseDate(p.end).getTime() + 86400000));
+      items.push({ l, part:p, e:parseDate(p.end), per: (+p.amount) * 12 * shareOf(l) / PERIODS[state.period].div, r:{ count:occ.length, total:sum(occ, o => o.amt) } });
+    });
+  });
+  if(!items.length) return '';
+  items.sort((a,b) => a.e - b.e);
+  const freed = sum(items.filter(x => x.l.kind==='expense'), x => x.per);
   return `<section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Bientôt terminés</h2>${freed ? `<span class="muted small">+${eur(freed)} ${P_.unit} libérés</span>` : ''}</div>
-    <div class="list">${L.map(l => { const e = endDate(l), r = remaining(l);
-      return `<button class="row press" data-edit="${esc(l.id)}">${tile(l.cat)}
-        <span style="min-width:0"><div class="t">${esc(l.label)}</div><div class="s">Dernier paiement en ${monthYear(e)}${r && r.count ? ` · reste ${eur(r.total * shareOf(l), 0)}` : ''}</div></span>
-        <span class="v num" style="color:${l.kind==='expense'?'var(--green)':'var(--orange)'}">${l.kind==='expense'?'+':'−'}${eur(perPeriod(l))}<small>${P_.unit}</small></span></button>`; }).join('')}</div></section>`;
+    <div class="list">${items.map(({l, part, e, per, r}) => `<button class="row press" data-edit="${esc(l.id)}">${tile(l.cat)}
+        <span style="min-width:0"><div class="t">${esc(l.label)}${partName(part)}</div><div class="s">Dernier paiement en ${monthYear(e)}${r && r.count ? ` · reste ${eur(r.total * shareOf(l), 0)}` : ''}</div></span>
+        <span class="v num" style="color:${l.kind==='expense'?'var(--green)':'var(--orange)'}">${l.kind==='expense'?'+':'−'}${eur(per)}<small>${P_.unit}</small></span></button>`).join('')}</div></section>`;
 }
 function miniTimeline(){
   const tl = timeline(); const avg = sum(tl,m=>m.out)/12; const max = Math.max(...tl.map(m=>m.out), avg) || 1;
@@ -1126,7 +1255,7 @@ function viewBudget(){
     <button class="btn tint press desk-cols" data-act="new" data-kind="${k}">${ic('plus',2.4)} Ajouter</button></div>
   ${groups.map(g=>{
     const items = lines.filter(l=> (CATS[l.cat]? l.cat : (k==='income'?'autres':'divers'))===g.id).sort((a,b)=>perPeriod(b)-perPeriod(a));
-    return `<div class="group-h"><span>${g.c.label}</span><span class="num">${eur(g.v)}</span></div>
+    return `<div class="group-h"><span>${esc(g.c.label)}</span><span class="num">${eur(g.v)}</span></div>
     <div class="list">${items.map(l=>{ const d = nextDue(l);
       return `<button class="row wide press" data-edit="${esc(l.id)}">${tile(l.cat)}
         <span style="min-width:0"><div class="t">${esc(l.label)}${proLabel(l)}</div><div class="s">${freqText(l)}${d && l.freq!=='monthly' && l.freq!=='multi' && !endDate(l)?' · '+dueText(d):''}${endText(l)}</div></span>
@@ -1284,13 +1413,118 @@ function remindersCard(){
     <p class="muted small" style="margin:4px 0 0">Envoyés chaque matin vers 8 h, en une seule notification. Les réglages valent pour tous tes appareils ; active les rappels sur chacun d'eux.</p></section>`;
 }
 async function refreshPush(){ const st = await Store.pushStatus(); if(st !== state.pushState){ state.pushState = st; if(state.route==='foyer') render(); } }
+function catsEntry(){
+  const created = Object.values(CATS).filter(c => c.custom).length, hidden = Object.values(CATS).filter(c => c.hidden).length;
+  return `<a class="card save-card press" href="#categories" style="text-decoration:none;color:inherit">
+    <span class="save-ic">${ic('tag')}</span><span class="grow"><strong>Catégories</strong><br><span class="muted small">Créer, renommer, masquer, choisir couleurs, icônes et mots-clés${created || hidden ? ` · ${created} créée${created>1?'s':''}, ${hidden} masquée${hidden>1?'s':''}` : ''}</span></span>
+    <span class="chev">${ic('chev')}</span></a>`;
+}
+function viewCategories(){
+  const k = state.catKind || 'expense';
+  const vis = catsOf(k), hid = catsOf(k, true).filter(id => CATS[id].hidden);
+  const row = (id, i, arr, hidden) => { const c = CATS[id], n = catUse(id);
+    return `<div class="row">${tile(id)}<span style="min-width:0"><div class="t">${esc(c.label)}${c.pro ? '<span class="ptag">Pro</span>' : ''}</div>
+      <div class="s">${n ? `${n} ligne${n>1?'s':''}` : 'Aucune ligne'}${c.custom ? ' · créée par le foyer' : ''}${c.userKw && c.userKw.length ? ` · ${c.userKw.length} mot${c.userKw.length>1?'s':''}-clé${c.userKw.length>1?'s':''}` : ''}</div></span>
+      <span class="cat-acts">${hidden ? '' : `<button class="mini press" data-cmove="${id}" data-dir="-1" ${i===0?'disabled':''} aria-label="Monter">${ic('up')}</button><button class="mini press" data-cmove="${id}" data-dir="1" ${i===arr.length-1?'disabled':''} aria-label="Descendre">${ic('down')}</button>`}
+      <button class="mini press" data-chide="${id}" aria-label="${hidden ? 'Afficher' : 'Masquer'} ${esc(c.label)}">${ic(hidden ? 'eye' : 'eyeoff')}</button>
+      <button class="mini press" data-cedit="${id}" aria-label="Modifier ${esc(c.label)}">${ic('pencil')}</button></span></div>`; };
+  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Catégories', false)}<div class="stack">
+    <div class="seg" role="group" aria-label="Type"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${k==='expense'?0:100}%)"></span>
+      <button data-catkind="expense" aria-pressed="${k==='expense'}">Dépenses</button><button data-catkind="income" aria-pressed="${k==='income'}">Revenus</button></div>
+    <p class="muted small" style="margin:0">L'ordre choisi ici est celui de la saisie. Pour proposer une catégorie, l'appli regarde d'abord comment le foyer a déjà classé des lignes semblables, puis tes mots-clés.</p>
+    <div class="list catlist">${vis.map((id,i,a) => row(id,i,a,false)).join('')}</div>
+    <button class="btn primary press" data-act="cat-new">${ic('plus',2.4)}Nouvelle catégorie</button>
+    ${hid.length ? `<div class="group-h"><span>Masquées</span><span>${hid.length}</span></div><p class="muted small" style="margin:-4px 0 0">Absentes de la saisie et des suggestions. Les lignes déjà classées les gardent.</p>
+      <div class="list catlist" style="opacity:.72">${hid.map((id,i,a) => row(id,i,a,true)).join('')}</div>` : ''}
+  </div>`;
+}
+/* --- panneau d'édition d'une catégorie (réutilise le panneau de saisie) --- */
+let catSheet = null;
+function showPanel(html){
+  const el = $('#sheet'); el.innerHTML = html;
+  if(el.hidden){ el.hidden = false; $('#scrim').hidden = false; requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.classList.add('on'); $('#scrim').classList.add('on'); })); document.documentElement.style.overflow='hidden'; }
+}
+function openCatSheet(id, opts = {}){
+  const c = id ? CATS[id] : null;
+  catSheet = c ? { id, label:c.label, color:c.color, icon:c.icon, kind:c.kind, pro:!!c.pro, kw:[...(c.userKw||[])], custom:c.custom, confirm:false, moveTo:'', returnTo:opts.returnTo||null }
+    : { id:null, label:'', color: CAT_COLORS[Object.values(CATS).filter(x=>x.custom).length % CAT_COLORS.length], icon:'tag', kind: opts.kind || state.catKind || 'expense', pro:false, kw:[], custom:true, confirm:false, moveTo:'', returnTo:opts.returnTo||null };
+  sheet = null;
+  showPanel(catSheetHTML());
+  bindCatSheet();
+  if(!id) setTimeout(() => $('#c-label')?.focus({preventScroll:true}), 380);
+}
+function catSheetHTML(){
+  const c = catSheet, used = c.id ? catUse(c.id) : 0;
+  const base = c.id && BASE_CATS[c.id] ? BASE_CATS[c.id].kw.slice(0, 10) : [];
+  const others = catsOf(c.kind).filter(x => x !== c.id);
+  return `<div class="sheet-h"><div class="grab"></div>
+    <div class="sheet-top"><button class="l" data-act="cat-cancel">Annuler</button><h3 id="sheet-title">${c.id ? 'Catégorie' : 'Nouvelle catégorie'}</h3><button class="r" data-act="cat-save">${c.id ? 'OK' : 'Créer'}</button></div></div>
+  <div class="sheet-b">
+    <div class="cat-preview"><span class="tile" id="c-tile" style="background:${c.color}">${ic(c.icon,2.1)}</span><span id="c-name">${esc(c.label) || 'Nom de la catégorie'}</span></div>
+    <div class="field"><div class="frow"><input type="text" id="c-label" maxlength="30" placeholder="Nom (ex. Animaux)" value="${esc(c.label)}" aria-label="Nom de la catégorie" style="text-align:left"></div></div>
+    ${!c.id ? `<div class="seg" role="group" aria-label="Type"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${c.kind==='expense'?0:100}%)"></span>
+      <button data-ckind="expense" aria-pressed="${c.kind==='expense'}">Dépense</button><button data-ckind="income" aria-pressed="${c.kind==='income'}">Revenu</button></div>` : ''}
+    <div><span class="flabel">Couleur</span><div class="swatches">${CAT_COLORS.map(col => `<button class="swatch press" data-ccolor="${col}" style="background:${col}" aria-pressed="${c.color===col}" aria-label="Couleur ${col}"></button>`).join('')}</div></div>
+    <div><span class="flabel">Icône</span><div class="icons">${CAT_ICONS.map(n => `<button class="icon-pick press" data-cicon="${n}" aria-pressed="${c.icon===n}" aria-label="Icône ${n}">${ic(n)}</button>`).join('')}</div></div>
+    <div class="field"><div class="frow"><span>Pro par défaut</span><span class="muted small" style="flex:1;min-width:0">Nouvelles lignes en nature Pro</span><label class="switch"><input type="checkbox" id="c-pro" ${c.pro?'checked':''} aria-label="Pro par défaut"><span></span></label></div></div>
+    <div><span class="flabel">Mots-clés</span><div class="field">
+      ${c.kw.length ? `<div class="kwchips">${c.kw.map((k,i) => `<span class="kwchip">${esc(k)}<button data-ckwdel="${i}" aria-label="Retirer ${esc(k)}">${ic('close',2.6)}</button></span>`).join('')}</div>` : ''}
+      <div class="frow"><input type="text" id="c-kw" maxlength="30" placeholder="Ajouter un mot (ex. Lampiris)" autocomplete="off" style="text-align:left" aria-label="Nouveau mot-clé"><button class="textbtn press" data-act="cat-kw-add">Ajouter</button></div></div>
+      <p class="hint">Si le nom d'une ligne contient un de ces mots, l'appli propose cette catégorie. Elle apprend aussi de tes lignes déjà classées.${base.length ? ` Mots de départ : ${base.map(esc).join(', ')}.` : ''}</p></div>
+    ${c.id && c.custom ? `<div id="c-del">${c.confirm ? `
+      ${used ? `<div class="field"><div class="frow"><span>Déplacer ${used} ligne${used>1?'s':''} vers</span><select id="c-move" style="flex:1;min-width:0;height:40px;border:0;background:var(--fill2);border-radius:10px;padding:0 8px;font-size:16px;color:var(--fg)">${others.map(o => `<option value="${o}" ${c.moveTo===o?'selected':''}>${esc(CATS[o].label)}</option>`).join('')}</select></div></div>` : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><button class="btn gray block press" data-act="cat-del-no">Garder</button><button class="btn danger block press" data-act="cat-del-yes">${ic('trash')}Supprimer</button></div>`
+      : `<button class="btn danger block press" data-act="cat-del-ask">${ic('trash')}Supprimer la catégorie</button>`}</div>`
+      : c.id && catDocs[c.id] ? `<button class="btn gray block press" data-act="cat-reset">Rétablir le réglage d'origine</button>` : ''}
+  </div>`;
+}
+function renderCatSheet(){ const b = document.querySelector('#sheet .sheet-b'), top = b ? b.scrollTop : 0; showPanel(catSheetHTML()); bindCatSheet(); const nb = document.querySelector('#sheet .sheet-b'); if(nb) nb.scrollTop = top; }
+function bindCatSheet(){
+  const l = $('#c-label'); l.addEventListener('input', () => { catSheet.label = l.value; $('#c-name').textContent = l.value || 'Nom de la catégorie'; });
+  l.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); saveCatSheet(); } });
+  $('#c-pro').addEventListener('change', e => { catSheet.pro = e.target.checked; });
+  const kw = $('#c-kw'); kw.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); addKw(); } });
+  const mv = $('#c-move'); if(mv){ catSheet.moveTo = mv.value; mv.addEventListener('change', () => { catSheet.moveTo = mv.value; }); }
+}
+function addKw(){ const kw = $('#c-kw'), v = (kw.value||'').trim().toLowerCase(); if(!v) return;
+  if(!catSheet.kw.includes(v) && catSheet.kw.length < 40) catSheet.kw.push(v.slice(0,30)); catSheet.label = $('#c-label').value; renderCatSheet(); setTimeout(() => $('#c-kw')?.focus(), 0); }
+function leaveCatSheet(){
+  const back = catSheet && catSheet.returnTo; catSheet = null;
+  if(back){ sheet = back; showPanel(sheetHTML(!back.isNew)); bindSheet(); } else closeSheet();
+}
+function catDocBase(id){ const c = CATS[id]; return c.custom ? { label:c.label, color:c.color, icon:c.icon, kind:c.kind, pro:!!c.pro, kw:c.userKw||[], hidden:!!c.hidden, order:c.order, custom:true }
+  : { ...(catDocs[id]||{}) }; }
+function saveCatSheet(){
+  const c = catSheet; c.label = ($('#c-label').value||'').trim();
+  if(!c.label){ toast('Donne un nom à la catégorie'); $('#c-label').focus(); return; }
+  const pending = ($('#c-kw')?.value||'').trim().toLowerCase(); if(pending && !c.kw.includes(pending)) c.kw.push(pending.slice(0,30));
+  let id = c.id;
+  if(!id){
+    id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+    const maxOrder = Math.max(0, ...Object.values(CATS).map(x => x.order||0));
+    Store.saveCat(id, { label:c.label.slice(0,30), color:c.color, icon:c.icon, kind:c.kind, pro:c.pro, kw:c.kw, hidden:false, order:maxOrder + 10, custom:true });
+  } else {
+    Store.saveCat(id, { ...catDocBase(id), label:c.label.slice(0,30), color:c.color, icon:c.icon, pro:c.pro, kw:c.kw, order:CATS[id].order, hidden:CATS[id].hidden });
+  }
+  toast(c.id ? 'Catégorie enregistrée' : `Catégorie « ${c.label} » créée`);
+  const back = c.returnTo;
+  if(back){ back.cat = id; back.catTouched = true; back.why = ''; }
+  leaveCatSheet();
+}
+function moveCat(id, dir){
+  const ids = catsOf(CATS[id].kind), i = ids.indexOf(id), j = i + dir; if(j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  // ordre compact pour ce type ; on n'écrit que les catégories qui changent de place
+  const kindBase = CATS[ids[0]].kind==='income' ? 5000 : 0;
+  ids.forEach((x, n) => { const o = kindBase + n*10; if(CATS[x].order !== o) Store.saveCat(x, { ...catDocBase(x), order:o, hidden:CATS[x].hidden }); });
+}
 function viewFoyer(){
   const fb = !!(F && state.hid), m = state.meta, f = state.form;
   const nameForm = `<section class="card"><div class="card-h"><h2>Nom du foyer</h2></div>
     <form class="inline" id="name-form" novalidate><input class="inp" id="h-name" maxlength="40" value="${esc(f['h-name'] ?? (m.name||''))}" aria-label="Nom du foyer" style="box-shadow:none;background:var(--fill2)">
     <button class="btn tint press" type="submit">Enregistrer</button></form></section>`;
   if(!fb){
-    return `${header('Réglages', 'Foyer', false)}<div class="stack">${nameForm}
+    return `${header('Réglages', 'Foyer', false)}<div class="stack">${catsEntry()}${nameForm}
       <section class="card"><div class="card-h"><h2>${state.mode==='cloud' ? 'Budget partagé' : 'Données sur cet appareil'}</h2></div>
       <p class="muted" style="margin:0">${state.mode==='cloud'
         ? "Cet aperçu se partage depuis le menu Partager de la page : ajoute ton ou ta partenaire en accès Contributeur. Pour l'appli installable avec comptes et code d'invitation, ouvre la version en ligne."
@@ -1321,6 +1555,7 @@ function viewFoyer(){
       : `<p class="muted" style="margin:0 0 14px">Crée un code et envoie-le. Ton ou ta partenaire crée son compte dans l'appli, choisit « Rejoindre un foyer » et le saisit. Vous voyez ensuite le même budget, en direct.</p>
         <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
     </section>
+    ${catsEntry()}
     ${nameForm}
     ${remindersCard()}
     <section class="card"><div class="card-h"><h2>Compte</h2></div>
@@ -1337,7 +1572,7 @@ function render(){
   if(state.mode==='onboard'){ main.innerHTML = viewOnboard(); return; }
   if(state.mode==='loading' || state.mode==='cloud-wait'){ main.innerHTML = loading(); return; }
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
-  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer}[state.route] || viewHome;
+  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories}[state.route] || viewHome;
   main.innerHTML = v();
   lastPeriodRender = state.period; lastScopeRender = scopeNow();
 }
@@ -1347,7 +1582,7 @@ let sheet = null;
 function openSheet(line, kind){
   const editing = !!line;
   const fmtA = v => (isFinite(+v) && +v > 0) ? nf2.format(+v).replace(/\u202f|\u00a0/g,' ').replace(/,00$/,'') : '';
-  sheet = editing ? {...line, amountStr: fmtA(line.amount), parts: (line.parts||[]).map(p => ({ day: String(p.day), amount: fmtA(p.amount), label: p.label||'' })), catTouched:true, confirm:false}
+  sheet = editing ? {...line, amountStr: fmtA(line.amount), parts: (line.parts||[]).map(p => ({ day: String(p.day), amount: fmtA(p.amount), label: p.label||'', end: p.end || (line.freq==='multi' ? line.end||'' : '') })), catTouched:true, confirm:false}
     : {id: uid(), kind: kind || (state.route==='budget'?state.budgetKind:'expense'), label:'', amountStr:'', freq:'monthly', parts:[], variable:false, cat:'', catTouched:false, due:'', saved:0, pro: state.scope==='pro' && hasPro() ? 100 : 0, confirm:false, isNew:true};
   sheet.pro = Math.round(+sheet.pro || 0);
   sheet.nature = sheet.pro===0 ? 'private' : sheet.pro===100 ? 'pro' : 'mixed';
@@ -1364,7 +1599,7 @@ function closeSheet(){
   const el = $('#sheet'); el.classList.remove('on'); el.style.transform=''; $('#scrim').classList.remove('on');
   document.documentElement.style.overflow='';
   setTimeout(()=>{ if(!el.classList.contains('on')){ el.hidden = true; $('#scrim').hidden = true; el.innerHTML=''; } }, 420);
-  sheet = null;
+  sheet = null; catSheet = null;
 }
 function sheetHTML(editing){
   const s = sheet;
@@ -1409,24 +1644,27 @@ function setNature(n, touched = true){
   sheetNature();
 }
 function sheetCats(){
-  const s = sheet; const ids = Object.keys(CATS).filter(k=>CATS[k].kind===s.kind);
-  $('#f-cats').innerHTML = ids.map(k=>`<button class="chip cat press" data-cat="${k}" aria-pressed="${s.cat===k}">${tile(k)}${CATS[k].label}</button>`).join('');
-  $('#f-sugg').textContent = (!s.catTouched && s.cat) ? '· suggérée' : '';
+  const s = sheet; const ids = catsOf(s.kind); if(s.cat && CATS[s.cat] && CATS[s.cat].kind===s.kind && !ids.includes(s.cat)) ids.push(s.cat);
+  $('#f-cats').innerHTML = ids.map(k=>`<button class="chip cat press" data-cat="${k}" aria-pressed="${s.cat===k}">${tile(k)}${esc(CATS[k].label)}</button>`).join('')
+    + `<button class="chip add press" data-act="cat-new-inline">${ic('plus',2.4)}Nouvelle</button>`;
+  $('#f-sugg').textContent = (!s.catTouched && s.cat) ? `· suggérée${s.why ? ', ' + s.why : ''}` : '';
   if(!s.natureTouched && CATS[s.cat]?.pro && s.nature!=='pro') setNature('pro', false);
   else if(!s.natureTouched && s.nature==='pro' && !CATS[s.cat]?.pro && s.pro===100 && !(state.scope==='pro' && hasPro())) setNature('private', false);
 }
-const partsTotal = () => sum(sheet.parts || [], p => { const v = parseAmount(p.amount); return isFinite(v) && v > 0 ? v : 0; });
+const partsTotal = () => sum((sheet.parts || []).filter(p => !p.end || parseDate(p.end) >= today0()), p => { const v = parseAmount(p.amount); return isFinite(v) && v > 0 ? v : 0; });
 function sheetParts(){
   const s = sheet, box = $('#f-parts'), a = $('#f-amount');
   if(s.freq !== 'multi'){ box.innerHTML = ''; if(a){ a.readOnly = false; a.title = ''; } return; }
-  if(!s.parts.length){ const v = parseAmount(s.amountStr); s.parts = [{ day:'', amount: isFinite(v) && v>0 ? s.amountStr : '', label:'' }, { day:'', amount:'', label:'' }]; }
+  if(!s.parts.length){ const v = parseAmount(s.amountStr); s.parts = [{ day:'', amount: isFinite(v) && v>0 ? s.amountStr : '', label:'', end:'' }, { day:'', amount:'', label:'', end:'' }]; }
   const days = d => `<option value="">Jour</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${String(i+1)===String(d)?'selected':''}>le ${i+1}</option>`).join('')}`;
   box.innerHTML = `<span class="flabel">Prélèvements du mois</span><div class="field parts">
     ${s.parts.map((p,i)=>`<div class="prow">
       <select data-pi="${i}" data-pf="day" aria-label="Jour du prélèvement ${i+1}">${days(p.day)}</select>
       <input data-pi="${i}" data-pf="amount" inputmode="decimal" placeholder="Montant (€)" value="${esc(p.amount)}" aria-label="Montant du prélèvement ${i+1}">
       ${s.parts.length > 1 ? `<button class="prm press" data-prm="${i}" aria-label="Retirer ce prélèvement">${ic('close',2.4)}</button>` : '<span></span>'}
-      <input class="plabel" data-pi="${i}" data-pf="label" maxlength="30" placeholder="Libellé facultatif (ex. Crédit 1)" value="${esc(p.label)}">
+      <div class="prow2"><input class="plabel" data-pi="${i}" data-pf="label" maxlength="30" placeholder="Libellé (ex. Crédit 1)" value="${esc(p.label)}">
+        <label class="pend"><span>Fin</span><input type="date" data-pi="${i}" data-pf="end" value="${esc(p.end||'')}" aria-label="Fin du prélèvement ${i+1} (facultatif)"></label></div>
+      ${p.end && parseDate(p.end) < today0() ? `<span class="ended">Terminé en ${monthYear(parseDate(p.end))} : ne compte plus dans le budget.</span>` : ''}
     </div>`).join('')}
     <div class="parts-foot">${s.parts.length < 12 ? '<button class="textbtn press" data-act="part-add" style="padding:6px 0">+ Ajouter un prélèvement</button>' : '<span></span>'}<span class="num">Total <b>${eur(partsTotal())}</b> / mois</span></div></div>`;
   syncPartsTotal();
@@ -1442,7 +1680,7 @@ function sheetDates(){
   const s = sheet; const prov = s.kind==='expense' && (s.freq==='once' || (FREQ[s.freq].months||0)>=2);
   const lab = s.freq==='once' ? 'Date prévue' : s.freq==='weekly' ? 'Premier paiement' : 'Prochaine échéance';
   $('#f-dates').innerHTML = `${s.freq==='multi' ? '' : `<div class="frow"><span>${lab}</span><input type="date" id="f-due" value="${esc(s.due||'')}"></div>`}
-    ${s.freq!=='once' ? `<div class="frow"><span>Fin des paiements</span><input type="date" id="f-end" value="${esc(s.end||'')}" aria-describedby="f-end-info"></div>` : ''}
+    ${s.freq!=='once' && s.freq!=='multi' ? `<div class="frow"><span>Fin des paiements</span><input type="date" id="f-end" value="${esc(s.end||'')}" aria-describedby="f-end-info"></div>` : ''}
     ${prov?`<div class="frow"><span>Déjà mis de côté</span><input id="f-saved" inputmode="decimal" placeholder="0 €" value="${s.saved? esc(String(s.saved).replace('.',',')) : ''}"></div>`:''}`;
   const hint = $('#f-hint'); if(hint) hint.remove();
   const ei = $('#f-end-info'); if(ei) ei.remove();
@@ -1457,6 +1695,13 @@ function sheetEndInfo(){
   const el = $('#f-end-info'); if(!el || !sheet) return;
   const s = sheet, v = parseAmount(s.amountStr);
   if(s.freq==='once'){ el.textContent = ''; return; }
+  if(s.freq==='multi'){
+    const ps = (s.parts||[]).map(p => ({ day:+p.day, amount:parseAmount(p.amount), label:p.label, end:p.end })).filter(p => p.end);
+    if(!ps.length){ el.textContent = "Fin : facultative, par prélèvement. Utile si tes crédits ne se terminent pas en même temps."; return; }
+    const r = remaining({ freq:'multi', parts:ps });
+    el.textContent = r && r.count ? `Prélèvements avec une fin : ${r.count} paiement${r.count>1?'s':''} restant${r.count>1?'s':''}, soit ${eur(r.total)} jusqu'en ${monthYear(r.last)}.` : 'Les prélèvements avec une date de fin sont terminés.';
+    return;
+  }
   if(!s.end){ el.textContent = 'Fin des paiements : facultative. Pour un crédit, un leasing ou une location, indique la date du dernier paiement.'; return; }
   if(s.due && s.end < s.due){ el.innerHTML = '<span style="color:var(--red)">La fin des paiements est avant la prochaine échéance.</span>'; return; }
   const r = remaining({ freq:s.freq, due:s.due, end:s.end, amount: isFinite(v) ? v : 0, parts: (s.parts||[]).map(p => ({ day:+p.day, amount: parseAmount(p.amount) })) });
@@ -1478,12 +1723,13 @@ function bindSheet(){
   const a = $('#f-amount'), lab = $('#f-label');
   a.addEventListener('input', ()=>{ a.value = a.value.replace(/[^\d.,\s]/g,''); sheet.amountStr = a.value; a.style.width = Math.max(2, a.value.length+.6)+'ch'; sheetConv(); });
   a.style.width = Math.max(2, (a.value||'0').length+.6)+'ch';
-  lab.addEventListener('input', ()=>{ sheet.label = lab.value; if(!sheet.catTouched){ const g = suggestCat(lab.value, sheet.kind); sheet.cat = g||''; sheetCats(); } sheetConv(); });
+  lab.addEventListener('input', ()=>{ sheet.label = lab.value; if(!sheet.catTouched){ const g = suggestCat(lab.value, sheet.kind, sheet.id); sheet.cat = g ? g.id : ''; sheet.why = g ? g.why : ''; sheetCats(); } sheetConv(); });
   [a,lab].forEach(i=>i.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(i===a) lab.focus(); else saveSheet(); } }));
   sheetCats(); sheetNature(); sheetDates(); sheetParts(); sheetConv();
   $('#f-var').addEventListener('change', e => { sheet.variable = e.target.checked; });
   const box = $('#f-parts');
   const onPart = e => { const t = e.target; if(!t.dataset || t.dataset.pi == null) return; sheet.parts[+t.dataset.pi][t.dataset.pf] = t.value;
+    if(t.dataset.pf === 'end'){ if(e.type === 'change'){ sheetParts(); sheetEndInfo(); } return; }
     if(t.dataset.pf !== 'label'){ syncPartsTotal(); sheetEndInfo(); } };
   box.addEventListener('input', onPart); box.addEventListener('change', onPart);
   // drag to dismiss (phone)
@@ -1503,10 +1749,10 @@ async function saveSheet(){
   if(s.freq==='multi'){
     const bad = s.parts.findIndex(p => !(+p.day >= 1) || !(parseAmount(p.amount) > 0));
     if(!s.parts.length || bad >= 0){ toast(bad >= 0 ? `Prélèvement ${bad+1} : choisis le jour et le montant` : 'Ajoute au moins un prélèvement'); return; }
-    parts = s.parts.map(p => { const o = { day:+p.day, amount: Math.round(parseAmount(p.amount)*100)/100 }; if(p.label.trim()) o.label = p.label.trim().slice(0,30); return o; });
+    parts = s.parts.map(p => { const o = { day:+p.day, amount: Math.round(parseAmount(p.amount)*100)/100 }; if(p.label.trim()) o.label = p.label.trim().slice(0,30); if(p.end) o.end = p.end; return o; });
   }
   const line = { id:s.id, kind:s.kind, label:s.label.trim(), amount: Math.round(amount*100)/100, freq:s.freq,
-    cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.freq==='multi' ? '' : (s.due||''), end: s.freq==='once' ? '' : (s.end||''), saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
+    cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.freq==='multi' ? '' : (s.due||''), end: (s.freq==='once' || s.freq==='multi') ? '' : (s.end||''), saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
     pro: s.nature==='private' ? 0 : s.nature==='pro' ? 100 : Math.min(95, Math.max(5, Math.round(+s.pro||50))),
     variable: !!s.variable,
     createdAt: s.createdAt || Date.now() };
@@ -1522,7 +1768,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 function setPeriod(p){ if(!PERIODS[p] || p===state.period) return; state.period = p; ls.set('bf.period', p); render(); }
 function route(){
   const h = location.hash.replace('#','');
-  state.route = ROUTES.some(r=>r.id===h) ? h : 'accueil';
+  state.route = ROUTES.some(r=>r.id===h) || h==='categories' ? h : 'accueil';
   if(state.route==='foyer' && F) refreshPush();
   render(); window.scrollTo({top:0});
 }
@@ -1546,8 +1792,18 @@ document.addEventListener('click', async e => {
   if(d.cat && sheet){ sheet.cat = d.cat; sheet.catTouched = true; sheetCats(); return; }
   if(d.fkind && sheet){ sheet.kind = d.fkind; $('#kind-ind').style.transform = `translateX(${d.fkind==='expense'?0:100}%)`;
     document.querySelectorAll('[data-fkind]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.fkind===d.fkind));
-    if(!CATS[sheet.cat] || CATS[sheet.cat].kind!==d.fkind){ sheet.cat = suggestCat(sheet.label, d.fkind)||''; sheet.catTouched=false; }
+    if(!CATS[sheet.cat] || CATS[sheet.cat].kind!==d.fkind){ const g = suggestCat(sheet.label, d.fkind, sheet.id); sheet.cat = g ? g.id : ''; sheet.why = g ? g.why : ''; sheet.catTouched=false; }
     sheetCats(); sheetNature(); sheetDates(); return; }
+  if(d.catkind){ state.catKind = d.catkind; return render(); }
+  if(d.cmove){ moveCat(d.cmove, +d.dir); return; }
+  if(d.chide){ const id = d.chide, h = !CATS[id].hidden; Store.saveCat(id, { ...catDocBase(id), order:CATS[id].order, hidden:h }); toast(h ? `« ${CATS[id].label} » masquée` : `« ${CATS[id].label} » affichée`); return; }
+  if(d.cedit){ openCatSheet(d.cedit); return; }
+  if(catSheet){
+    if(d.ccolor){ catSheet.color = d.ccolor; catSheet.label = $('#c-label').value; renderCatSheet(); return; }
+    if(d.cicon){ catSheet.icon = d.cicon; catSheet.label = $('#c-label').value; renderCatSheet(); return; }
+    if(d.ckind){ catSheet.kind = d.ckind; catSheet.label = $('#c-label').value; renderCatSheet(); return; }
+    if(d.ckwdel != null){ catSheet.kw.splice(+d.ckwdel, 1); catSheet.label = $('#c-label').value; renderCatSheet(); return; }
+  }
   if(d.authtab){ state.authTab = d.authtab; state.formErr = ''; state.formInfo = ''; return render(); }
   switch(d.act){
     case 'reset': { const em = (state.form['a-email']||'').trim(); if(!em){ state.formErr = 'Saisis ton e-mail ci-dessus, puis touche à nouveau « Mot de passe oublié ».'; return render(); }
@@ -1559,7 +1815,18 @@ document.addEventListener('click', async e => {
     case 'push-test': { try { const reg = await navigator.serviceWorker.ready;
       await reg.showNotification('Budget du Foyer', { body: "C'est ainsi que tes rappels s'afficheront.", icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'test' }); }
       catch { toast("La notification de test n'a pas pu s'afficher."); } return; }
-    case 'part-add': if(sheet){ sheet.parts.push({ day:'', amount:'', label:'' }); sheetParts(); const last = document.querySelectorAll('#f-parts select'); last[last.length-1]?.focus(); } return;
+    case 'cat-new': openCatSheet(null, { kind: state.catKind || 'expense' }); return;
+    case 'cat-new-inline': if(sheet){ sheet.label = $('#f-label').value; openCatSheet(null, { kind: sheet.kind, returnTo: sheet }); } return;
+    case 'cat-cancel': leaveCatSheet(); return;
+    case 'cat-save': saveCatSheet(); return;
+    case 'cat-kw-add': addKw(); return;
+    case 'cat-del-ask': catSheet.confirm = true; catSheet.label = $('#c-label').value; renderCatSheet(); return;
+    case 'cat-del-no': catSheet.confirm = false; renderCatSheet(); return;
+    case 'cat-del-yes': { const id = catSheet.id, name = CATS[id].label, used = state.lines.filter(l => l.cat===id);
+      if(used.length){ const to = catSheet.moveTo || catsOf(CATS[id].kind).find(x => x !== id); await Store.bulkSave(used.map(l => ({ ...l, cat: to }))); }
+      Store.removeCat(id); catSheet.returnTo = null; leaveCatSheet(); toast(`« ${name} » supprimée${used.length ? `, ${used.length} ligne${used.length>1?'s':''} déplacée${used.length>1?'s':''}` : ''}`); return; }
+    case 'cat-reset': { const id = catSheet.id; Store.removeCat(id); catSheet.returnTo = null; leaveCatSheet(); toast("Réglage d'origine rétabli"); return; }
+    case 'part-add': if(sheet){ sheet.parts.push({ day:'', amount:'', label:'', end:'' }); sheetParts(); const last = document.querySelectorAll('#f-parts select'); last[last.length-1]?.focus(); } return;
     case 'photo-pick': $('#photo-input').click(); return;
     case 'photo-google': Store.saveProfile({ ...profileOf(state.user.uid), photo: Store.googlePhoto() }); toast('Photo Google utilisée'); return;
     case 'photo-remove': { const p0 = { ...profileOf(state.user.uid) }; delete p0.photo; Store.saveProfile(p0); toast('Photo retirée'); return; }
@@ -1587,7 +1854,7 @@ document.addEventListener('click', async e => {
       toast('Budget type chargé, adapte-le à ta famille'); return; }
   }
 });
-$('#scrim').addEventListener('click', closeSheet);
+$('#scrim').addEventListener('click', () => { if(catSheet && catSheet.returnTo) leaveCatSheet(); else closeSheet(); });
 document.addEventListener('input', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
 document.addEventListener('change', async e => {
   if(e.target.id !== 'photo-input' || !e.target.files || !e.target.files[0]) return;
@@ -1637,6 +1904,7 @@ document.addEventListener('submit', async e => {
   }
 });
 document.addEventListener('keydown', e => {
+  if(catSheet){ if(e.key==='Escape') leaveCatSheet(); return; }
   if(sheet){ if(e.key==='Escape') closeSheet(); return; }
   if(e.target.closest('input,textarea,select') || e.metaKey || e.ctrlKey || e.altKey || document.body.classList.contains('gate')) return;
   const k = e.key.toUpperCase();

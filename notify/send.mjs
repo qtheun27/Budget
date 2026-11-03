@@ -39,7 +39,7 @@ const dayIn = (y, m, day) => new Date(Date.UTC(y, m, Math.min(day, new Date(Date
 /** Prélèvements d'une ligne « plusieurs fois par mois » tombant le jour `d`. */
 function partsOn(l, d) {
   const end = l.end ? parse(l.end) : null; if (end && d > end) return [];
-  return (Array.isArray(l.parts) ? l.parts : []).filter(p => +p.day >= 1 && +p.amount > 0 && iso(dayIn(d.getUTCFullYear(), d.getUTCMonth(), +p.day)) === iso(d));
+  return (Array.isArray(l.parts) ? l.parts : []).filter(p => +p.day >= 1 && +p.amount > 0 && (!p.end || parse(p.end) >= d) && iso(dayIn(d.getUTCFullYear(), d.getUTCMonth(), +p.day)) === iso(d));
 }
 
 /** Prochaine échéance d'une ligne à partir de `from` (même logique que l'appli). */
