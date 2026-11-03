@@ -324,7 +324,27 @@ body.gate .main{margin-left:0;max-width:none;padding-bottom:calc(32px + env(safe
 .periodbar{display:grid;gap:8px}
 .seg.scope{height:30px}
 .seg.scope button{font-size:12.5px}
-.seg.who button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px}
+.fbar{display:flex;gap:8px;flex-wrap:wrap}
+.fbar-wrap{margin:-4px 0 14px}
+.fpill{height:32px;max-width:100%;padding:0 10px 0 9px;border-radius:999px;background:var(--fill);color:var(--fg);font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:background .2s,color .2s}
+.fpill span:not(.avatar){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpill>svg{width:16px;height:16px;flex:none;color:var(--fg2)}
+.fpill>svg:last-child{width:13px;height:13px;margin-left:-1px;transition:transform .2s}
+.fpill[aria-expanded="true"]>svg:last-child{transform:rotate(180deg)}
+.fpill .avatar.xs{margin-left:-4px}
+.fpill.on{background:var(--accent-soft);color:var(--accent)}
+.fpill.on>svg{color:var(--accent)}
+.fmenu{position:fixed;z-index:60;padding:6px;border-radius:16px;background:var(--card);box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px var(--sep);opacity:0;transform:scale(.96) translateY(-4px);transform-origin:top left;transition:opacity .16s,transform .2s cubic-bezier(.2,.9,.3,1.2)}
+.fmenu.on{opacity:1;transform:none}
+.fmenu button{width:100%;display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;text-align:left;color:var(--fg)}
+.fmenu button:hover,.fmenu button:active{background:var(--fill2)}
+.fmenu button>svg{width:16px;height:16px;flex:none;color:var(--accent)}
+.fmenu button>svg:first-child{color:var(--fg2);width:20px;height:20px}
+.fmenu .mi{flex:1;min-width:0;display:flex;flex-direction:column}
+.fmenu b{font-size:15px;font-weight:600}
+.fmenu small{font-size:12.5px;color:var(--fg2)}
+.fmenu .avatar.xs{margin:0;width:26px;height:26px;font-size:12px}
+@media (min-width:900px){.periodbar .fbar{justify-content:flex-end}}
 .wtag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:650;background:var(--accent-soft);color:var(--accent);vertical-align:1px;margin-left:6px}
 .avatar.xs{width:22px;height:22px;font-size:11px;margin-left:-6px}
 .avatar.xs.common{background:var(--fill);color:var(--fg2)}
@@ -425,6 +445,7 @@ img.avatar{object-fit:cover;background:var(--fill)}
 </div>
 <div class="scrim" id="scrim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></section>
+<div id="fmenu" class="fmenu" role="menu" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="photo-input" accept="image/*" hidden>
 
@@ -1103,24 +1124,39 @@ function periodBar(){
   return `<div class="periodbar"><div class="seg" role="group" aria-label="Période d'affichage">
     <span class="seg-ind" style="width:calc((100% - 4px)/4);transform:translateX(${i*100}%)"></span>
     ${PKEYS.map(k=>`<button data-period="${k}" aria-pressed="${k===state.period}">${PERIODS[k].label}</button>`).join('')}
-  </div>${scopeBar()}${whoBar()}</div>`;
+  </div>${filterBar()}</div>`;
 }
-function whoBar(){
-  if(!hasPeople()) return '';
-  const keys = ['all', 'common', ...people()], i = keys.indexOf(whoNow());
-  const lab = k => k==='all' ? 'Tous' : k==='common' ? 'Commun' : esc(firstName(k));
-  return `<div class="seg scope who" role="group" aria-label="Pour qui">
-    <span class="seg-ind" style="width:calc((100% - 4px)/${keys.length});transform:translateX(${i*100}%)"></span>
-    ${keys.map(k=>`<button data-who="${esc(k)}" aria-pressed="${k===whoNow()}">${lab(k)}</button>`).join('')}</div>`;
+/* Filtres Privé/Pro et Pour qui : une seule ligne de pastilles compactes, chacune ouvre un petit menu. */
+const SCOPE_PILL = { all:'Privé et pro', private:'Privé', pro:'Pro' };
+const SCOPE_IC = { all:'coin', private:'house', pro:'case' };
+const whoName = k => k==='all' ? 'Tout le foyer' : k==='common' ? 'Commun' : esc(firstName(k));
+function filterBar(){
+  const sp = hasPro(), wp = hasPeople(); if(!sp && !wp) return '';
+  const sc = scopeNow(), w = whoNow();
+  return `<div class="fbar">
+    ${sp ? `<button class="fpill press${sc!=='all'?' on':''}" data-menu="scope" aria-haspopup="menu" aria-expanded="false">${ic(SCOPE_IC[sc],2.1)}<span>${SCOPE_PILL[sc]}</span>${ic('down',2.4)}</button>` : ''}
+    ${wp ? `<button class="fpill press${w!=='all'?' on':''}" data-menu="who" aria-haspopup="menu" aria-expanded="false">${w==='all' ? ic('home',2.1) : w==='common' ? ic('users',2.1) : avatar(w,'xs')}<span>${whoName(w)}</span>${ic('down',2.4)}</button>` : ''}
+  </div>`;
 }
-const filtersBlock = () => (hasPro() || hasPeople()) ? `<div class="periodbar" style="max-width:360px;margin-bottom:14px">${scopeBar()}${whoBar()}</div>` : '';
-function scopeBar(){
-  if(!hasPro()) return '';
-  const keys = Object.keys(SCOPES), i = keys.indexOf(scopeNow());
-  return `<div class="seg scope" role="group" aria-label="Privé ou professionnel">
-    <span class="seg-ind" style="width:calc((100% - 4px)/3);transform:translateX(${i*100}%)"></span>
-    ${keys.map(k=>`<button data-scope="${k}" aria-pressed="${k===scopeNow()}">${SCOPES[k]}</button>`).join('')}</div>`;
+function openFilterMenu(btn){
+  const kind = btn.dataset.menu, m = $('#fmenu');
+  if(!m.hidden && m.dataset.for===kind){ closeFilterMenu(); return; }
+  const items = kind==='scope'
+    ? Object.keys(SCOPES).map(k => ({ attr:`data-scope="${k}"`, on: k===scopeNow(), icon: ic(SCOPE_IC[k],2.1), label: SCOPE_PILL[k], sub: k==='all' ? 'Toutes les lignes' : k==='private' ? 'Part privée des lignes' : 'Part professionnelle des lignes' }))
+    : ['all','common',...people()].map(k => ({ attr:`data-who="${esc(k)}"`, on: k===whoNow(), icon: k==='all'||k==='common' ? `<span class="avatar xs common">${ic(k==='all'?'home':'users',2.2)}</span>` : avatar(k,'xs'), label: whoName(k), sub: k==='all' ? 'Lignes communes et personnelles' : k==='common' ? 'Lignes partagées du foyer' : 'Ses lignes personnelles' }));
+  m.innerHTML = items.map(i => `<button role="menuitemradio" aria-checked="${i.on}" ${i.attr}>${i.icon}<span class="mi"><b>${i.label}</b><small>${i.sub}</small></span>${i.on ? ic('check',2.6) : ''}</button>`).join('');
+  m.dataset.for = kind; m.hidden = false;
+  const r = btn.getBoundingClientRect(), w = Math.min(280, innerWidth - 32);
+  m.style.width = w + 'px'; m.style.top = (r.bottom + 8) + 'px'; const right = r.left + r.width/2 > innerWidth/2; m.style.transformOrigin = right ? 'top right' : 'top left';
+  m.style.left = Math.max(16, Math.min(right ? r.right - w : r.left, innerWidth - w - 16)) + 'px';
+  document.querySelectorAll('.fpill').forEach(b => b.setAttribute('aria-expanded', b===btn));
+  requestAnimationFrame(() => m.classList.add('on'));
 }
+function closeFilterMenu(){ const m = $('#fmenu'); if(!m || m.hidden) return; m.classList.remove('on'); m.hidden = true; document.querySelectorAll('.fpill').forEach(b => b.setAttribute('aria-expanded','false')); }
+addEventListener('scroll', closeFilterMenu, {passive:true}); addEventListener('resize', closeFilterMenu);
+addEventListener('keydown', e => { if(e.key==='Escape') closeFilterMenu(); });
+document.addEventListener('pointerdown', e => { if(!e.target.closest('#fmenu, .fpill')) closeFilterMenu(); });
+const filtersBlock = () => (hasPro() || hasPeople()) ? `<div class="fbar-wrap">${filterBar()}</div>` : '';
 const isDesk = () => window.matchMedia('(min-width:900px)').matches;
 const profileOf = id => ((state.meta.memberProfiles||{})[id]) || {};
 const nameOf = id => profileOf(id).name || ((state.meta.memberEmails||{})[id]) || 'Membre';
@@ -1356,7 +1392,7 @@ function viewProvisions(){
   const smooth = sum(L, x=>x.s.smooth);
   return `${header('Dépenses irrégulières lissées', 'Provisions', false)}
   ${exampleBanner()}
-  ${hasPeople() ? `<div class="periodbar" style="max-width:360px;margin-bottom:14px">${whoBar()}</div>` : ''}
+  ${filtersBlock()}
   ${!L.length ? `<div class="card empty"><div class="save-ic">${ic('jar')}</div><h2>Aucune provision</h2><p>Les dépenses trimestrielles, semestrielles, annuelles ou ponctuelles apparaissent ici avec le montant à mettre de côté chaque mois.</p><button class="btn primary press" data-act="new">${ic('plus',2.4)}Ajouter une dépense annuelle</button></div>` : `
   <section class="card hero" style="margin-bottom:14px">
     <div class="hero-l">À verser ce mois-ci sur ton compte provisions</div>
@@ -1825,6 +1861,8 @@ function route(){
 document.addEventListener('click', async e => {
   const t = e.target.closest('button,[data-act]'); if(!t) return;
   const d = t.dataset;
+  if(d.menu){ openFilterMenu(t); return; }
+  closeFilterMenu();
   if(d.period) return setPeriod(d.period);
   if(d.scope){ state.scope = d.scope; ls.set('bf.scope', d.scope); if(state.route==='accueil' && t.classList.contains('link')) window.scrollTo({top:0, behavior:'smooth'}); return render(); }
   if(d.nature && sheet){ setNature(d.nature); return; }
