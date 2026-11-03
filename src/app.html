@@ -538,10 +538,15 @@ const ERR = {
   'auth/email-already-in-use':'Un compte existe déjà avec cet e-mail. Connecte-toi.', 'auth/weak-password':'Mot de passe trop court : 6 caractères minimum.',
   'auth/invalid-email':'Adresse e-mail invalide.', 'auth/missing-password':'Saisis ton mot de passe.', 'auth/too-many-requests':'Trop de tentatives. Réessaie dans quelques minutes.',
   'auth/network-request-failed':'Pas de connexion internet.', 'auth/operation-not-allowed':"La connexion par e-mail n'est pas encore activée.", 'auth/configuration-not-found':"La connexion par e-mail n'est pas encore activée.",
+  'auth/popup-blocked':'La fenêtre Google a été bloquée. Autorise les fenêtres surgissantes ou utilise ton e-mail.',
+  'auth/account-exists-with-different-credential':'Un compte existe déjà avec cet e-mail. Connecte-toi avec ton mot de passe.',
+  'auth/operation-not-supported-in-this-environment':"La connexion Google n'est pas possible ici. Utilise ton e-mail.",
+  'auth/unauthorized-domain':"Ce site n'est pas autorisé pour la connexion Google.",
   'join/not-found':"Ce code n'existe pas. Vérifie-le avec la personne qui l'a créé.", 'join/used':'Ce code a déjà été utilisé. Demande un nouveau code.',
   'join/expired':'Ce code a expiré. Demande un nouveau code.', 'join/format':'Le code fait 8 caractères, par exemple K7QM-4XPT.',
   'permission-denied':"Accès refusé. Ce code n'est peut-être plus valable.", 'unavailable':'Pas de connexion internet.'
 };
+const GOOGLE_G = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 const errMsg = e => ERR[e && e.code] || 'Une erreur est survenue, réessaie.';
 const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const r = new Uint32Array(8); crypto.getRandomValues(r); return [...r].map(x=>CODE_ABC[x % CODE_ABC.length]).join(''); };
@@ -595,27 +600,34 @@ const Store = {
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
     state.user = { uid:u.uid, email:u.email || '' }; state.mode = 'loading'; render();
     const { S } = F;
-    this.unsubs.push(S.onSnapshot(S.doc(F.db, 'users', u.uid), snap => {
+    this.unsubs.push(S.onSnapshot(S.doc(F.db, 'users', u.uid), { includeMetadataChanges:true }, snap => {
+      // Attendre la confirmation du serveur : un foyer tout juste créé ou rejoint n'est lisible qu'après.
+      if(snap.metadata.hasPendingWrites) return;
       const h = snap.exists() ? snap.data().householdId : null;
       if(!h){ if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; state.mode = 'onboard'; render(); } return; }
       if(h !== state.hid) this.watchHousehold(h);
     }, err => this.fbError(err)));
   },
-  watchHousehold(h){
+  watchHousehold(h, attempt = 0){
     this.hUnsubs.forEach(u => u()); this.hUnsubs = [];
     state.hid = h; const { S } = F;
+    const onErr = err => {
+      // Juste après la création ou l'adhésion, l'accès peut mettre un instant à être reconnu : on réessaie.
+      if(err && err.code === 'permission-denied' && attempt < 3 && state.hid === h){ setTimeout(() => { if(state.hid === h) this.watchHousehold(h, attempt + 1); }, 800 * (attempt + 1)); return; }
+      this.fbError(err);
+    };
     this.hUnsubs.push(S.onSnapshot(S.doc(F.db, 'households', h), snap => {
       if(!snap.exists()) return;
       const d = snap.data();
       state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {} };
       renderData();
-    }, err => this.fbError(err)));
+    }, onErr));
     this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'lines'), { includeMetadataChanges:true }, snap => {
       state.lines = snap.docs.map(d => ({ id:d.id, ...d.data() }));
       state.offline = snap.metadata.fromCache;
       if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; }
       state.mode = 'cloud'; renderData();
-    }, err => this.fbError(err)));
+    }, onErr));
   },
   fbError(err){
     console.warn(err); clearTimeout(this.slowT);
@@ -990,6 +1002,8 @@ function viewAuth(){
       <button class="btn primary block press" type="submit" ${state.busy?'disabled':''}>${state.busy ? 'Un instant…' : t==='up' ? 'Créer mon compte' : 'Se connecter'}</button>
     </form>
     ${t==='in' ? '<button class="textbtn press" data-act="reset">Mot de passe oublié ?</button>' : ''}
+    <div class="or">ou</div>
+    <button class="btn gray block press" data-act="google" ${state.busy?'disabled':''} style="background:var(--card);box-shadow:var(--shadow)">${GOOGLE_G}Continuer avec Google</button>
     ${state.formInfo ? `<div class="banner" style="margin:0">${esc(state.formInfo)}</div>` : ''}
   </div></div>`;
 }
@@ -1178,6 +1192,10 @@ document.addEventListener('click', async e => {
   switch(d.act){
     case 'reset': { const em = (state.form['a-email']||'').trim(); if(!em){ state.formErr = 'Saisis ton e-mail ci-dessus, puis touche à nouveau « Mot de passe oublié ».'; return render(); }
       try { await Store.reset(em); state.formErr=''; state.formInfo = `Un e-mail pour choisir un nouveau mot de passe a été envoyé à ${em}.`; } catch(e){ state.formErr = errMsg(e); } return render(); }
+    case 'google': { state.busy = true; state.formErr = ''; render();
+      try { const p = new F.A.GoogleAuthProvider(); p.setCustomParameters({ prompt:'select_account' }); await F.A.signInWithPopup(F.auth, p); }
+      catch(e){ if(!['auth/popup-closed-by-user','auth/cancelled-popup-request','auth/user-cancelled'].includes(e.code)) state.formErr = errMsg(e); }
+      state.busy = false; return render(); }
     case 'signout': await Store.signOut(); state.form = {}; state.formErr = ''; location.hash = 'accueil'; return;
     case 'reload': location.reload(); return;
     case 'invite': state.busy = true; render();
