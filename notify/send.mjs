@@ -35,6 +35,12 @@ const addMonths = (d, k) => {
   return r;
 };
 const MONTHS = { monthly: 1, bimonthly: 2, quarterly: 3, semiannual: 6, annual: 12 };
+const dayIn = (y, m, day) => new Date(Date.UTC(y, m, Math.min(day, new Date(Date.UTC(y, m + 1, 0)).getUTCDate())));
+/** Prélèvements d'une ligne « plusieurs fois par mois » tombant le jour `d`. */
+function partsOn(l, d) {
+  const end = l.end ? parse(l.end) : null; if (end && d > end) return [];
+  return (Array.isArray(l.parts) ? l.parts : []).filter(p => +p.day >= 1 && +p.amount > 0 && iso(dayIn(d.getUTCFullYear(), d.getUTCMonth(), +p.day)) === iso(d));
+}
 
 /** Prochaine échéance d'une ligne à partir de `from` (même logique que l'appli). */
 function nextDue(l, from) {
@@ -51,8 +57,9 @@ function nextDue(l, from) {
   return end && r > end ? null : r;
 }
 
-const eur = n => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: n >= 1000 ? 0 : 2 }).format(n);
-const list = items => items.map(i => `${i.label} ${eur(i.amount)}`).join(' · ');
+const eurRaw = n => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: n >= 1000 ? 0 : 2 }).format(n);
+const eur = (n, approx) => (approx ? '≈ ' : '') + eurRaw(n);
+const list = items => items.map(i => `${i.label} ${eur(i.amount, i.approx)}`).join(' · ');
 
 function compose(today, soon) {
   const all = [...today, ...soon];
@@ -62,7 +69,7 @@ function compose(today, soon) {
     const i = all[0], when = today.length ? "aujourd'hui" : 'dans 3 jours';
     return {
       title: `${today.length ? "Aujourd'hui" : 'Dans 3 jours'} · ${i.label}`,
-      body: i.kind === 'income' ? `Rentrée attendue ${when} : ${eur(i.amount)}.` : `${eur(i.amount)} à payer ${when}.`,
+      body: i.kind === 'income' ? `Rentrée attendue ${when} : ${eur(i.amount, i.approx)}.` : `${eur(i.amount, i.approx)} à payer ${when}.`,
     };
   }
   const lines = [];
@@ -100,8 +107,14 @@ async function main() {
     const today = [], soon = [];
     for (const l of linesCache.get(user.householdId)) {
       if (l.kind === 'income' && !prefs.income) continue;
+      if (l.freq === 'multi') {
+        const mk = p => ({ label: p.label ? `${l.label} (${p.label})` : l.label, amount: +p.amount, kind: l.kind, approx: !!l.variable });
+        if (prefs.sameDay) partsOn(l, t).forEach(p => today.push(mk(p)));
+        if (prefs.before3) partsOn(l, t3).forEach(p => soon.push(mk(p)));
+        continue;
+      }
       const n = nextDue(l, t); if (!n) continue;
-      const item = { label: l.label, amount: +l.amount || 0, kind: l.kind };
+      const item = { label: l.label, amount: +l.amount || 0, kind: l.kind, approx: !!l.variable };
       if (prefs.sameDay && iso(n) === tISO) today.push(item);
       else if (prefs.before3 && iso(n) === iso(t3)) soon.push(item);
     }

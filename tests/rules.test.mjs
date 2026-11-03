@@ -157,6 +157,14 @@ test('date de fin des paiements acceptée, format invalide refusé', async () =>
   await assertFails(setDoc(doc(db, 'households/h1/lines/e2'), { ...line, end: 20280301 }));
   await assertFails(setDoc(doc(db, 'households/h1/lines/e3'), { ...line, end: 'x'.repeat(30) }));
 });
+test('plusieurs prélèvements par mois et montant variable', async () => {
+  const db = as('A');
+  const parts = [{ day: 28, amount: 512.4, label: 'Crédit 1' }, { day: 28, amount: 233.1, label: 'Crédit 2' }, { day: 3, amount: 180 }, { day: 6, amount: 95.5 }];
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/m1'), { ...line, freq: 'multi', amount: 1021, parts, variable: false }));
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/m2'), { ...line, freq: 'multi', amount: 240, parts: parts.slice(0, 2), variable: true }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/m3'), { ...line, freq: 'multi', parts: Array(13).fill({ day: 1, amount: 1 }) }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/m4'), { ...line, variable: 'oui' }));
+});
 test('un membre modifie son profil (prénom, photo)', async () => {
   const db = as('A');
   await assertSucceeds(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Quentin', photo: 'data:image/jpeg;base64,AAAA' } }));
