@@ -144,6 +144,31 @@ test('une ligne invalide est refusée', async () => {
   await assertFails(setDoc(doc(db, 'households/h1/lines/bad4'), { ...line, label: '' }));
   await assertFails(setDoc(doc(db, 'households/h1/lines/bad5'), { ...line, kind: 'transfer' }));
 });
+test('part professionnelle : 0 à 100 acceptée, hors limites refusée', async () => {
+  const db = as('A');
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/p1'), { ...line, pro: 40 }));
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/p2'), { ...line, kind: 'income', cat: 'pro', pro: 100 }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/p3'), { ...line, pro: 140 }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/p4'), { ...line, pro: 'beaucoup' }));
+});
+test('un membre modifie son profil (prénom, photo)', async () => {
+  const db = as('A');
+  await assertSucceeds(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Quentin', photo: 'data:image/jpeg;base64,AAAA' } }));
+  await assertSucceeds(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Quentin', photo: 'https://lh3.googleusercontent.com/a/xyz' } }));
+});
+test("modifier le profil d'un autre membre est refusé", async () => {
+  await env.withSecurityRulesDisabled(async ctx => { await updateDoc(doc(ctx.firestore(), 'households/h1'), { members: ['A', 'B'], 'memberEmails.B': 'b@x.be' }); });
+  await assertFails(updateDoc(doc(as('A'), 'households/h1'), { 'memberProfiles.B': { name: 'Pirate' } }));
+});
+test('un profil invalide est refusé', async () => {
+  const db = as('A');
+  await assertFails(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Q', photo: 'javascript:alert(1)' } }));
+  await assertFails(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { name: 'Q', admin: true } }));
+  await assertFails(updateDoc(doc(db, 'households/h1'), { 'memberProfiles.A': { photo: 'data:image/jpeg;base64,' + 'A'.repeat(90000) } }));
+});
+test('un non-membre ne modifie aucun profil', async () => {
+  await assertFails(updateDoc(doc(as('C'), 'households/h1'), { 'memberProfiles.C': { name: 'C' } }));
+});
 test('supprimer un foyer est refusé', async () => {
   await assertFails(deleteDoc(doc(as('A'), 'households/h1')));
 });

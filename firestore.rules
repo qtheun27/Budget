@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Budget du Foyer — règles Firestore
 //
-// households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, createdAt
+// households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, memberProfiles{uid: {name, photo}}, createdAt
 // households/{hid}/lines/{id}  lignes de budget
 // users/{uid}                  { householdId } : le foyer de chaque compte
 // invites/{code}               code d'invitation à usage unique, expire après 7 jours
@@ -53,6 +53,14 @@ service cloud.firestore {
         && request.resource.data.joinCode is string
         && validInviteFor(request.resource.data.joinCode, hid);
 
+      // Un membre modifie son propre profil (prénom, photo) et seulement le sien.
+      allow update: if isMember(hid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberProfiles'])
+        && (!('memberProfiles' in resource.data)
+            || request.resource.data.memberProfiles.diff(resource.data.memberProfiles).affectedKeys().hasOnly([me()]))
+        && (('memberProfiles' in resource.data) || request.resource.data.memberProfiles.keys().hasOnly([me()]))
+        && validProfile(request.resource.data.memberProfiles[me()]);
+
       allow delete: if false;
 
       // ---------- lignes de budget ----------
@@ -72,8 +80,16 @@ service cloud.firestore {
         && invAfter.usedBy == me();
     }
 
+    // Photo : image redimensionnée (data URL, ~20 Ko) ou photo de profil Google (https).
+    function validProfile(p) {
+      return p is map && p.keys().hasOnly(['name', 'photo'])
+        && (!('name' in p) || (p.name is string && p.name.size() <= 40))
+        && (!('photo' in p) || (p.photo is string && p.photo.size() <= 80000
+            && (p.photo.matches('^data:image/(jpeg|png|webp);base64,.*') || p.photo.matches('^https://.*'))));
+    }
+
     function validLine(d) {
-      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'saved', 'example', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'saved', 'pro', 'example', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['kind', 'label', 'amount', 'freq', 'cat'])
         && d.kind in ['income', 'expense']
         && d.label is string && d.label.size() > 0 && d.label.size() <= 60
@@ -82,6 +98,7 @@ service cloud.firestore {
         && d.cat is string && d.cat.size() <= 40
         && (!('due' in d) || (d.due is string && d.due.size() <= 10))
         && (!('saved' in d) || ((d.saved is int || d.saved is float) && d.saved >= 0 && d.saved < 10000000))
+        && (!('pro' in d) || (d.pro is int && d.pro >= 0 && d.pro <= 100))
         && (!('example' in d) || d.example is bool)
         && (!('createdAt' in d) || d.createdAt is int || d.createdAt is float)
         && (!('updatedAt' in d) || d.updatedAt is int || d.updatedAt is float);

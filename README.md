@@ -7,8 +7,10 @@ Appli web installable (PWA) de budget familial. On encode chaque revenu ou dépe
 ## Écrans
 - **Accueil** : disponible après dépenses et épargne, répartition par catégorie, prochaines échéances, aperçu 12 mois.
 - **Budget** : revenus et dépenses groupés par catégorie, montant d'origine et montant lissé.
-- **Échéancier** : sorties réelles des 12 prochains mois, pics repérés par rapport à la moyenne lissée.
+- **Échéancier** : rentrées et sorties réelles des 12 prochains mois, solde de chaque mois, pics repérés.
 - **Provisions** : pour chaque dépense irrégulière, combien mettre de côté par mois pour être prêt à l'échéance.
+- **Pro / privé** : chaque ligne est privée, pro ou mixte (part pro en %). Vue Tout / Privé / Pro et carte « Activité complémentaire ».
+- **Foyer** : membres avec prénom et photo (photo Google reprise automatiquement, ou photo choisie, réduite à 192 px).
 
 ## Structure
 - `src/app.html` : source unique de l'appli (HTML, CSS, JS sans dépendance).

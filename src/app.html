@@ -107,7 +107,7 @@ h1{font-size:34px;line-height:1.08;letter-spacing:-.025em;font-weight:750;margin
 @media (min-width:900px){.grid.two{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}.span2{grid-column:1/-1}}
 .col{display:grid;gap:14px;min-width:0}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;min-width:0}
-.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px 12px;margin-bottom:12px;flex-wrap:wrap}
 .card-h h2{font-size:17px;font-weight:650;letter-spacing:-.01em;margin:0}
 .link{color:var(--accent);font-weight:550;font-size:14px;text-decoration:none;white-space:nowrap}
 .muted{color:var(--fg2)}
@@ -318,6 +318,32 @@ body.gate .main{margin-left:0;max-width:none;padding-bottom:calc(32px + env(safe
 .inline .inp{flex:1;min-width:0}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 .btns .btn{flex:1}
+
+/* ---------- pro / privé, profil, rentrées ---------- */
+.periodbar{display:grid;gap:8px}
+.seg.scope{height:30px}
+.seg.scope button{font-size:12.5px}
+.ptag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:650;background:color-mix(in srgb,#AF52DE 16%,transparent);color:#9B44C9;vertical-align:1px;margin-left:6px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ptag{color:#D08CF0}}
+:root[data-theme="dark"] .ptag{color:#D08CF0}
+.range{display:flex;flex-direction:column;gap:8px;padding:14px 16px}
+.range input{width:100%;accent-color:var(--accent)}
+.range-l{display:flex;justify-content:space-between;font-size:14px}
+.range-l b{font-weight:650}
+.pro-card .kpis{margin-top:4px}
+.pro-card .kpi{box-shadow:none;background:var(--fill2)}
+img.avatar{object-fit:cover;background:var(--fill)}
+.avatar.xl{width:84px;height:84px;font-size:32px}
+.profile{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.profile .grow{flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.bar .pair{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px}
+.bar .pair i{flex:1;max-width:15px}
+.bar i.inc{background:color-mix(in srgb,var(--green) 45%,var(--fill))}
+.bar[aria-pressed="true"] i.inc{background:var(--green)}
+.solde-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.solde-grid .kpi{box-shadow:none;background:var(--fill2)}
 </style>
 
 <div id="app">
@@ -337,6 +363,7 @@ body.gate .main{margin-left:0;max-width:none;padding-bottom:calc(32px + env(safe
 <div class="scrim" id="scrim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="photo-input" accept="image/*" hidden>
 
 <script type="application/json" id="tpl">
 [
@@ -401,6 +428,8 @@ const P = {
   trash:'<path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l.8 12.2a1.5 1.5 0 0 0 1.5 1.3h6.4a1.5 1.5 0 0 0 1.5-1.3L17.5 7"/>',
   users:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.3"/>',
   copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
+  store:'<path d="M4.5 9.5 6 4.5h12l1.5 5"/><path d="M4.5 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/><path d="M5.5 11.5v8h13v-8M10 19.5V15h4v4.5"/>',
+  camera:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.3"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/>'
 };
 const ic = (n, sw=1.9) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
@@ -419,9 +448,11 @@ const CATS = {
   loisirs:{label:'Loisirs & vacances',color:'#FF9500',icon:'sun',kind:'expense',kw:['vacance','voyage','sport','fitness','cinéma','cinema','loisir','cadeau','noël','noel']},
   impots:{label:'Impôts & taxes',color:'#8E8E93',icon:'doc',kind:'expense',kw:['impôt','impot','précompte','precompte','taxe','spf']},
   epargne:{label:'Épargne',color:'#00A89D',icon:'bank',kind:'expense',kw:['épargne','epargne','pension','placement','compte épargne']},
+  fraispro:{label:'Frais professionnels',color:'#7D5BD0',icon:'store',kind:'expense',pro:true,kw:['comptable','cotisation','secrétariat social','secretariat social','ucm','xerius','partena','liantis','acerta','matériel pro','materiel pro','logiciel','tva','frais pro']},
   divers:{label:'Divers',color:'#A2845E',icon:'dots',kind:'expense',kw:[]},
   salaire:{label:'Salaires & primes',color:'#34C759',icon:'case',kind:'income',kw:['salaire','prime','pécule','pecule','13e','bonus','chèque','cheque']},
   allocations:{label:'Allocations',color:'#0A84FF',icon:'gift',kind:'income',kw:['allocation','famiwal','kids','groeipakket','chômage','chomage','mutuelle']},
+  pro:{label:'Activité indépendante',color:'#7D5BD0',icon:'store',kind:'income',pro:true,kw:['facture','client','honoraire','indépendant','independant','complémentaire','complementaire','freelance','mission']},
   autres:{label:'Autres revenus',color:'#FF9500',icon:'coin',kind:'income',kw:['loyer perçu','location','remboursement','vente']}
 };
 const FREQ = {
@@ -449,8 +480,18 @@ const ROUTES = [
 ];
 
 const isProvision = l => l.kind==='expense' && (l.freq==='once' || (FREQ[l.freq]?.months||0) >= 2);
-const yearly = l => (+l.amount||0) * (FREQ[l.freq]?.perYear || 0);
-const perPeriod = (l, p=state.period) => yearly(l) / PERIODS[p].div;
+const SCOPES = { all:'Tout', private:'Privé', pro:'Pro' };
+/** Part professionnelle d'une ligne, de 0 (privé) à 1 (100 % pro). */
+const proPart = l => Math.min(100, Math.max(0, Math.round(+l.pro || 0))) / 100;
+const hasPro = () => state.lines.some(l => proPart(l) > 0);
+const scopeNow = () => hasPro() ? state.scope : 'all';
+/** Part de la ligne qui compte dans la vue choisie (Tout / Privé / Pro). */
+const shareOf = (l, sc = scopeNow()) => sc==='pro' ? proPart(l) : sc==='private' ? 1 - proPart(l) : 1;
+const yearlyRaw = l => (+l.amount||0) * (FREQ[l.freq]?.perYear || 0);
+const yearly = (l, sc) => yearlyRaw(l) * shareOf(l, sc);
+const perPeriod = (l, p=state.period, sc) => yearly(l, sc) / PERIODS[p].div;
+const inScope = (l, sc) => shareOf(l, sc) > 0;
+const proLabel = l => { const n = Math.round(proPart(l)*100); return n===0 ? '' : n===100 ? '<span class="ptag">Pro</span>' : `<span class="ptag">Pro ${n} %</span>`; };
 const sum = (arr, f) => arr.reduce((a,x)=>a+f(x),0);
 
 /* ================= formatting ================= */
@@ -499,7 +540,7 @@ function provisionState(l){
   const monthsLeft = days==null ? 12 : Math.max(1, Math.ceil(days/30.44));
   const remaining = Math.max(0, amount - saved);
   const needed = remaining / monthsLeft;
-  const smooth = l.freq==='once' ? needed : yearly(l)/12;
+  const smooth = l.freq==='once' ? needed : yearlyRaw(l)/12;
   let expected = null;
   if(l.freq!=='once' && due){ const span = FREQ[l.freq].months*30.44; expected = amount * Math.min(1, Math.max(0, 1 - days/span)); }
   const ready = saved >= amount - 0.005;
@@ -516,6 +557,7 @@ function suggestCat(label, kind){
 const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d : JSON.parse(v); }catch{ return d; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} } };
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
+  scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
 };
@@ -547,13 +589,14 @@ const ERR = {
   'permission-denied':"Accès refusé. Ce code n'est peut-être plus valable.", 'unavailable':'Pas de connexion internet.'
 };
 const GOOGLE_G = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const snapReady = () => !!(F && state.hid && state.user);
 const errMsg = e => ERR[e && e.code] || `Une erreur est survenue, réessaie.${e && e.code ? ` (${e.code})` : ''}`;
 const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const r = new Uint32Array(8); crypto.getRandomValues(r); return [...r].map(x=>CODE_ABC[x % CODE_ABC.length]).join(''); };
 const fmtCode = c => c.slice(0,4) + '-' + c.slice(4);
 const localImportable = () => (ls.get('bf.lines', null) || []).filter(l => !l.example);
 let pendingRender = false;
-const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#main') && /^(INPUT|TEXTAREA)$/.test(a.tagName)); };
+const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#main') && (a.tagName==='TEXTAREA' || (a.tagName==='INPUT' && /^(text|email|password|search|tel|url|number)$/.test(a.type)))); };
 /** Rendu déclenché par des données reçues : différé pendant la saisie pour ne pas voler le focus. */
 function renderData(){ if(typing()){ pendingRender = true; return; } render(); }
 document.addEventListener('focusout', () => setTimeout(() => { if(pendingRender && !typing()){ pendingRender = false; render(); } }, 0));
@@ -596,7 +639,7 @@ const Store = {
   },
   stop(){ [...this.unsubs, ...this.hUnsubs].forEach(u => { try { u(); } catch {} }); this.unsubs = []; this.hUnsubs = []; },
   onUser(u){
-    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' };
+    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false;
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
     state.user = { uid:u.uid, email:u.email || '' }; state.mode = 'loading'; render();
     const { S } = F;
@@ -619,7 +662,8 @@ const Store = {
     this.hUnsubs.push(S.onSnapshot(S.doc(F.db, 'households', h), snap => {
       if(!snap.exists()) return;
       const d = snap.data();
-      state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {} };
+      state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {}, memberProfiles:d.memberProfiles || {} };
+      this.autoProfile();
       renderData();
     }, onErr));
     this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'lines'), { includeMetadataChanges:true }, snap => {
@@ -628,6 +672,27 @@ const Store = {
       if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; }
       state.mode = 'cloud'; renderData();
     }, onErr));
+  },
+  /** Première fois avec Google : reprendre le prénom et la photo du compte Google. */
+  autoProfile(){
+    const me = state.user && state.user.uid; if(!me || this.autoDone || !snapReady()) return;
+    this.autoDone = true;
+    if((state.meta.memberProfiles||{})[me]) return;
+    const g = (F.auth.currentUser?.providerData || []).find(p => p.providerId === 'google.com');
+    const name = (g?.displayName || F.auth.currentUser?.displayName || '').trim().split(/\s+/)[0] || '';
+    const photo = g?.photoURL || F.auth.currentUser?.photoURL || '';
+    if(!name && !photo) return;
+    const prof = {}; if(name) prof.name = name.slice(0,40); if(photo && photo.startsWith('https://')) prof.photo = photo;
+    this.saveProfile(prof);
+  },
+  googlePhoto(){ const g = (F?.auth.currentUser?.providerData || []).find(p => p.providerId === 'google.com'); return g?.photoURL || ''; },
+  saveProfile(prof){
+    const me = state.user.uid; const clean = {};
+    if(prof.name) clean.name = String(prof.name).slice(0,40);
+    if(prof.photo) clean.photo = prof.photo;
+    state.meta.memberProfiles = { ...(state.meta.memberProfiles||{}), [me]: clean };
+    render();
+    return this.write(F.S.updateDoc(F.S.doc(F.db, 'households', state.hid), { ['memberProfiles.' + me]: clean }));
   },
   fbError(err){
     console.warn(err); clearTimeout(this.slowT);
@@ -721,35 +786,36 @@ const Store = {
 };
 
 /* ================= derived ================= */
-function totals(p = state.period){
-  const L = state.lines;
+function totals(p = state.period, sc = scopeNow()){
+  const L = state.lines.filter(l => inScope(l, sc));
   const inc = L.filter(l=>l.kind==='income'); const exp = L.filter(l=>l.kind==='expense');
-  const income = sum(inc, l=>perPeriod(l,p));
-  const savings = sum(exp.filter(l=>l.cat==='epargne'), l=>perPeriod(l,p));
-  const spend = sum(exp.filter(l=>l.cat!=='epargne'), l=>perPeriod(l,p));
-  const provisions = sum(exp.filter(isProvision), l=>perPeriod(l,p));
+  const income = sum(inc, l=>perPeriod(l,p,sc));
+  const savings = sum(exp.filter(l=>l.cat==='epargne'), l=>perPeriod(l,p,sc));
+  const spend = sum(exp.filter(l=>l.cat!=='epargne'), l=>perPeriod(l,p,sc));
+  const provisions = sum(exp.filter(isProvision), l=>perPeriod(l,p,sc));
   const free = income - spend - savings;
   return {income, spend, savings, provisions, free, rate: income ? savings/income : 0};
 }
 function byCat(kind, p = state.period){
   const m = new Map();
-  state.lines.filter(l=>l.kind===kind).forEach(l => { const k = CATS[l.cat] ? l.cat : (kind==='income'?'autres':'divers'); m.set(k, (m.get(k)||0) + perPeriod(l,p)); });
+  state.lines.filter(l=>l.kind===kind && inScope(l)).forEach(l => { const k = CATS[l.cat] ? l.cat : (kind==='income'?'autres':'divers'); m.set(k, (m.get(k)||0) + perPeriod(l,p)); });
   return [...m.entries()].map(([id,v])=>({id,v,c:CATS[id]})).sort((a,b)=>b.v-a.v);
 }
 function upcoming(n=6){
   const t = today0();
-  return state.lines.map(l=>({l, d: nextDue(l, t)})).filter(x=>x.d && x.l.freq!=='weekly')
+  return state.lines.filter(l=>inScope(l)).map(l=>({l, d: nextDue(l, t)})).filter(x=>x.d && x.l.freq!=='weekly')
     .sort((a,b)=>a.d-b.d || b.l.amount-a.l.amount).slice(0,n);
 }
 function timeline(){
   const t = today0(); const start = new Date(t.getFullYear(), t.getMonth(), 1);
-  const months = Array.from({length:12}, (_,i) => ({ start: addMonths(start,i), end: addMonths(start,i+1), out:0, inc:0, items:[] }));
-  state.lines.forEach(l => {
+  const months = Array.from({length:12}, (_,i) => ({ start: addMonths(start,i), end: addMonths(start,i+1), out:0, inc:0, items:[], incItems:[] }));
+  state.lines.filter(l => inScope(l)).forEach(l => {
+    const f = shareOf(l);
     months.forEach(m => {
       const occ = occurrences(l, m.start, m.end);
-      const add = (amt, date) => { if(l.kind==='expense'){ m.out += amt; m.items.push({l, amt, date}); } else m.inc += amt; };
+      const add = (amt, date) => { if(l.kind==='expense'){ m.out += amt; m.items.push({l, amt, date}); } else { m.inc += amt; m.incItems.push({l, amt, date}); } };
       if(occ===null){ add(yearly(l)/12, null); }
-      else occ.forEach(d => add(+l.amount||0, d));
+      else occ.forEach(d => add((+l.amount||0) * f, d));
     });
   });
   return months;
@@ -761,7 +827,7 @@ const tile = (catId, size) => { const c = CATS[catId] || CATS.divers; return `<s
 const freqText = l => `${eur(+l.amount)} ${FREQ[l.freq]?.unit||''}`;
 const dueText = d => d ? `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear()!==today0().getFullYear()?' '+d.getFullYear():''}` : '';
 const relDays = d => { const n = daysBetween(today0(), d); return n<=0 ? "aujourd'hui" : n===1 ? 'demain' : n<45 ? `dans ${n} jours` : `dans ${Math.round(n/30.44)} mois`; };
-let lastPeriodRender = state.period;
+let lastPeriodRender = state.period, lastScopeRender = 'all';
 
 function renderNav(){
   const cur = state.route;
@@ -787,13 +853,26 @@ function periodBar(){
   return `<div class="periodbar"><div class="seg" role="group" aria-label="Période d'affichage">
     <span class="seg-ind" style="width:calc((100% - 4px)/4);transform:translateX(${i*100}%)"></span>
     ${PKEYS.map(k=>`<button data-period="${k}" aria-pressed="${k===state.period}">${PERIODS[k].label}</button>`).join('')}
-  </div></div>`;
+  </div>${scopeBar()}</div>`;
+}
+function scopeBar(){
+  if(!hasPro()) return '';
+  const keys = Object.keys(SCOPES), i = keys.indexOf(scopeNow());
+  return `<div class="seg scope" role="group" aria-label="Privé ou professionnel">
+    <span class="seg-ind" style="width:calc((100% - 4px)/3);transform:translateX(${i*100}%)"></span>
+    ${keys.map(k=>`<button data-scope="${k}" aria-pressed="${k===scopeNow()}">${SCOPES[k]}</button>`).join('')}</div>`;
 }
 const isDesk = () => window.matchMedia('(min-width:900px)').matches;
+const profileOf = id => ((state.meta.memberProfiles||{})[id]) || {};
+const nameOf = id => profileOf(id).name || ((state.meta.memberEmails||{})[id]) || 'Membre';
+function avatar(id, cls=''){
+  const p = profileOf(id), label = (p.name || (state.meta.memberEmails||{})[id] || (id===state.user?.uid ? state.user.email : '') || '?');
+  return p.photo ? `<img class="avatar ${cls}" src="${esc(p.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar ${cls}">${esc(label[0])}</span>`;
+}
 function header(eyebrow, title, withPeriod=true){
   const d = isDesk();
   return `<header class="ph"><div class="ph-t"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div>
-    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="${state.user?'avatar':'icon-btn'} m-only press" href="#foyer" aria-label="Foyer et compte">${state.user ? esc((state.user.email||'?')[0]) : ic('users')}</a>` : ''}</div></header>
+    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="m-only press" href="#foyer" aria-label="Foyer et compte" style="text-decoration:none">${state.user ? avatar(state.user.uid) : `<span class="icon-btn">${ic('users')}</span>`}</a>` : ''}</div></header>
     ${withPeriod && !d ? periodBar() : ''}`;
 }
 function exampleBanner(){
@@ -821,7 +900,11 @@ function viewHome(){
   const freeTone = T.free < 0 ? 'bad' : T.income && T.free/T.income < .05 ? 'warn' : 'good';
   const freeLabel = T.free < 0 ? 'Budget dépassé' : freeTone==='warn' ? 'Marge serrée' : 'Budget équilibré';
   const base = Math.max(T.income, T.spend + T.savings) || 1;
-  const segs = [
+  const isPro = scopeNow()==='pro';
+  const segs = isPro ? [
+    {v:T.spend + T.savings, c:'var(--accent)', l:'Frais pro'},
+    {v:Math.max(0,T.free), c:'var(--green)', l:'Résultat'}
+  ] : [
     {v:T.spend, c:'var(--accent)', l:'Dépenses'},
     {v:T.savings, c:'#00A89D', l:'Épargne'},
     {v:Math.max(0,T.free), c:'var(--green)', l:'Disponible'}
@@ -834,24 +917,34 @@ function viewHome(){
   const provMonth = sum(provLines, l=>provisionState(l).needed);
   const late = provLines.filter(l=>provisionState(l).status==='late').length;
   const up = upcoming(5);
-  const anim = lastPeriodRender!==state.period ? ' swap' : '';
+  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()) ? ' swap' : '';
+  const sc = scopeNow();
+  const heroLabel = sc==='pro' ? `Résultat pro ${P_.noun}` : sc==='private' ? `Disponible privé ${P_.noun}` : `Disponible ${P_.noun}`;
+  const heroSub = sc==='pro' ? 'Revenus professionnels moins frais professionnels, avant impôts et cotisations.' : 'Après dépenses, épargne et provisions lissées.';
+  const PT = hasPro() && sc==='all' ? totals(state.period, 'pro') : null;
   return `${header(new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}), esc(state.meta.name||'Budget du Foyer'))}
   ${exampleBanner()}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid two">
     <div class="col">
       <section class="card hero">
-        <div class="hero-l">Disponible ${P_.noun} <span class="pill ${freeTone}">${freeLabel}</span></div>
+        <div class="hero-l">${heroLabel} <span class="pill ${freeTone}">${sc==='pro' ? (T.free<0 ? 'En perte' : 'Bénéficiaire') : freeLabel}</span></div>
         <div class="big num${anim}" id="hero-n">${eurBig(T.free)}</div>
-        <div class="muted small">Après dépenses, épargne et provisions lissées.</div>
+        <div class="muted small">${heroSub}</div>
         <div class="split" aria-hidden="true">${segs.filter(s=>s.v>0).map(s=>`<span style="flex-grow:${s.v/base};background:${s.c}"></span>`).join('')}</div>
         <div class="legend">${segs.map(s=>`<span><i class="dot" style="background:${s.c}"></i>${s.l} <b class="num">${eur(s.v)}</b></span>`).join('')}</div>
       </section>
       <div class="kpis${anim}">
-        <div class="kpi"><div class="kpi-l">Revenus</div><div class="kpi-v num" style="color:var(--green)">${eur(T.income,0)}</div></div>
-        <div class="kpi"><div class="kpi-l">Dépenses</div><div class="kpi-v num">${eur(T.spend,0)}</div></div>
-        <div class="kpi"><div class="kpi-l">Taux d'épargne</div><div class="kpi-v num">${Math.round(T.rate*100)}&nbsp;%</div></div>
+        <div class="kpi"><div class="kpi-l">${isPro?'Revenus pro':'Revenus'}</div><div class="kpi-v num" style="color:var(--green)">${eur(T.income,0)}</div></div>
+        <div class="kpi"><div class="kpi-l">${isPro?'Frais pro':'Dépenses'}</div><div class="kpi-v num">${eur(isPro ? T.spend + T.savings : T.spend,0)}</div></div>
+        <div class="kpi"><div class="kpi-l">${isPro?'Marge':'Taux d\'épargne'}</div><div class="kpi-v num">${Math.round((isPro ? (T.income ? T.free/T.income : 0) : T.rate)*100)}&nbsp;%</div></div>
       </div>
+      ${PT ? `<section class="card pro-card"><div class="card-h"><h2>Activité complémentaire</h2><button class="link" data-scope="pro">Vue pro</button></div>
+        <div class="kpis${anim}">
+          <div class="kpi"><div class="kpi-l">Revenus pro</div><div class="kpi-v num" style="color:var(--green)">${eur(PT.income,0)}</div></div>
+          <div class="kpi"><div class="kpi-l">Frais pro</div><div class="kpi-v num">${eur(PT.spend + PT.savings,0)}</div></div>
+          <div class="kpi"><div class="kpi-l">Résultat</div><div class="kpi-v num" style="color:${PT.free<0?'var(--red)':'var(--fg)'}">${eur(PT.free,0)}</div></div>
+        </div><p class="muted small" style="margin:10px 0 0">${P_.noun[0].toUpperCase()+P_.noun.slice(1)}, part professionnelle des lignes mixtes comprise. Pense à provisionner tes cotisations sociales et ton impôt.</p></section>` : ''}
       ${provLines.length ? `<a class="card save-card press" href="#provisions">
         <span class="save-ic">${ic('jar')}</span>
         <span class="grow"><span class="muted small">À mettre de côté ce mois-ci</span><br><strong class="num">${eur(provMonth)}</strong>
@@ -873,8 +966,8 @@ function viewHome(){
         <div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Prochaines échéances</h2><a class="link" href="#echeancier">Échéancier</a></div>
         <div class="list">${up.length ? up.map(({l,d})=>`<button class="row press" data-edit="${esc(l.id)}">
           <span class="date-chip"><b>${d.getDate()}</b><span>${MONTHS[d.getMonth()].replace('.','')}</span></span>
-          <span style="min-width:0"><div class="t">${esc(l.label)}</div><div class="s">${relDays(d)} · ${FREQ[l.freq].label.toLowerCase()}</div></span>
-          <span class="v num" style="color:${l.kind==='income'?'var(--green)':'var(--fg)'}">${l.kind==='income'?'+':''}${eur(+l.amount)}</span></button>`).join('')
+          <span style="min-width:0"><div class="t">${esc(l.label)}${proLabel(l)}</div><div class="s">${relDays(d)} · ${FREQ[l.freq].label.toLowerCase()}</div></span>
+          <span class="v num" style="color:${l.kind==='income'?'var(--green)':'var(--fg)'}">${l.kind==='income'?'+':''}${eur((+l.amount)*shareOf(l))}</span></button>`).join('')
           : '<div class="row"><span></span><span class="muted">Ajoute une date d\'échéance à tes lignes pour les voir ici.</span><span></span></div>'}</div>
       </section>
       ${miniTimeline()}
@@ -894,10 +987,11 @@ function miniTimeline(){
 
 function viewBudget(){
   const k = state.budgetKind; const P_ = PERIODS[state.period];
-  const lines = state.lines.filter(l=>l.kind===k);
+  const lines = state.lines.filter(l=>l.kind===k && inScope(l));
   const total = sum(lines, l=>perPeriod(l));
   const groups = byCat(k);
-  const anim = lastPeriodRender!==state.period ? ' swap' : '';
+  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()) ? ' swap' : '';
+  const scWord = {all:'', private:' privés', pro:' professionnels'}[scopeNow()];
   return `${header('Revenus et dépenses', 'Budget')}
   ${exampleBanner()}
   <div class="seg" role="group" aria-label="Type" style="max-width:360px;margin-bottom:16px">
@@ -905,7 +999,7 @@ function viewBudget(){
     <button data-kind="expense" aria-pressed="${k==='expense'}">Dépenses</button><button data-kind="income" aria-pressed="${k==='income'}">Revenus</button>
   </div>
   ${state.lines.length===0 ? emptyState() : `
-  <div class="totalbar"><div><div class="muted small">Total ${k==='expense'?'des dépenses':'des revenus'} ${P_.noun}</div>
+  <div class="totalbar"><div><div class="muted small">Total ${k==='expense' ? `des dépenses${{all:'', private:' privées', pro:' professionnelles'}[scopeNow()]}` : `des revenus${scWord}`} ${P_.noun}</div>
     <div class="big num${anim}">${eurBig(total)}</div></div>
     <button class="btn tint press desk-cols" data-act="new" data-kind="${k}">${ic('plus',2.4)} Ajouter</button></div>
   ${groups.map(g=>{
@@ -913,7 +1007,7 @@ function viewBudget(){
     return `<div class="group-h"><span>${g.c.label}</span><span class="num">${eur(g.v)}</span></div>
     <div class="list">${items.map(l=>{ const d = nextDue(l);
       return `<button class="row wide press" data-edit="${esc(l.id)}">${tile(l.cat)}
-        <span style="min-width:0"><div class="t">${esc(l.label)}</div><div class="s">${freqText(l)}${d && l.freq!=='monthly'?' · '+dueText(d):''}</div></span>
+        <span style="min-width:0"><div class="t">${esc(l.label)}${proLabel(l)}</div><div class="s">${freqText(l)}${d && l.freq!=='monthly'?' · '+dueText(d):''}</div></span>
         <span class="meta">${FREQ[l.freq].label}</span><span class="meta num">${d?dueText(d):'—'}</span>
         <span class="v num${anim}">${eur(perPeriod(l))}<small>${P_.unit}</small></span></button>`; }).join('')}</div>`;
   }).join('')}
@@ -921,40 +1015,50 @@ function viewBudget(){
 }
 
 function viewTimeline(){
-  const tl = timeline(); const avg = sum(tl,m=>m.out)/12; const max = Math.max(...tl.map(m=>m.out), avg)*1.08 || 1;
+  const tl = timeline(); const avg = sum(tl,m=>m.out)/12; const max = Math.max(...tl.map(m=>Math.max(m.out, m.inc)), avg)*1.08 || 1;
   const sel = Math.min(11, Math.max(0, state.month)); const m = tl[sel];
-  const items = [...m.items].sort((a,b)=> (a.date? a.date-0 : 9e15) - (b.date? b.date-0 : 9e15));
+  const byDate = (a,b)=> (a.date? a.date-0 : 9e15) - (b.date? b.date-0 : 9e15);
+  const items = [...m.items].sort(byDate);
   const dated = items.filter(i=>i.date); const spread = items.filter(i=>!i.date);
+  const incs = [...m.incItems].sort(byDate);
   const peaks = tl.filter(x=>x.out > avg*1.15).length;
-  const diff = m.out - avg;
-  return `${header('Sorties réelles mois par mois', 'Échéancier', false)}
+  const diff = m.out - avg, solde = m.inc - m.out;
+  const negMonths = tl.filter(x=>x.inc - x.out < 0).length;
+  const row = (i, sign) => `<button class="row press" data-edit="${esc(i.l.id)}">${i.date ? `<span class="date-chip"><b>${i.date.getDate()}</b><span>${MONTHS[i.date.getMonth()].replace('.','')}</span></span>` : tile(i.l.cat)}
+    <span style="min-width:0"><div class="t">${esc(i.l.label)}${proLabel(i.l)}</div><div class="s">${i.date ? `${CATS[i.l.cat]?.label||'Divers'} · ${FREQ[i.l.freq].label.toLowerCase()}` : `${freqText(i.l)} · réparti sur l'année`}</div></span>
+    <span class="v num" style="${sign==='+'?'color:var(--green)':''}">${sign}${eur(i.amt)}</span></button>`;
+  return `${header('Rentrées et sorties mois par mois', 'Échéancier', false)}
+  ${hasPro() ? `<div style="max-width:360px;margin-bottom:14px">${scopeBar()}</div>` : ''}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid">
     <section class="card">
-      <div class="card-h"><h2>12 prochains mois</h2><span class="legend"><span><i class="dot" style="background:var(--orange)"></i>Mois chargé</span><span><i class="dot" style="background:transparent;border:1.5px dashed var(--fg3)"></i>Moyenne lissée</span></span></div>
+      <div class="card-h"><h2>12 prochains mois</h2><span class="legend"><span><i class="dot" style="background:var(--green)"></i>Rentrées</span><span><i class="dot" style="background:var(--accent)"></i>Sorties</span><span><i class="dot" style="background:var(--orange)"></i>Mois chargé</span><span><i class="dot" style="background:transparent;border:1.5px dashed var(--fg3)"></i>Moyenne des sorties</span></span></div>
       <div class="bars-wrap"><div class="bars">
         <div class="avgline" style="bottom:${avg/max*165 + 20}px"><em class="num">${eur(avg,0)}</em></div>
-        ${tl.map((x,i)=>`<button class="bar ${x.out>avg*1.15?'peak':''}" data-month="${i}" aria-pressed="${i===sel}" aria-label="${MONTHS_L[x.start.getMonth()]} : ${eur(x.out,0)}">
-          <i style="height:${Math.max(4, x.out/max*165)}px"></i><span>${MSHORT[x.start.getMonth()]}</span></button>`).join('')}
+        ${tl.map((x,i)=>`<button class="bar ${x.out>avg*1.15?'peak':''}" data-month="${i}" aria-pressed="${i===sel}" aria-label="${MONTHS_L[x.start.getMonth()]} : rentrées ${eur(x.inc,0)}, sorties ${eur(x.out,0)}">
+          <span class="pair"><i class="inc" style="height:${Math.max(3, x.inc/max*165)}px"></i><i style="height:${Math.max(3, x.out/max*165)}px"></i></span><span>${MSHORT[x.start.getMonth()]}</span></button>`).join('')}
       </div></div>
-      <p class="muted small" style="margin:0">${peaks ? `${peaks} mois dépassent nettement ta moyenne. Les provisions servent à absorber ces pics.` : 'Tes sorties sont régulières sur l\'année.'}</p>
+      <p class="muted small" style="margin:0">${negMonths ? `${negMonths} mois où les sorties dépassent les rentrées : les provisions et ton épargne doivent couvrir ces mois-là.` : peaks ? `${peaks} mois dépassent nettement ta moyenne de sorties, mais tes rentrées les couvrent.` : 'Tes rentrées couvrent tes sorties tous les mois.'}</p>
     </section>
     <div class="grid two">
       <section class="card">
-        <div class="eyebrow" style="text-transform:capitalize">${MONTHS_L[m.start.getMonth()]} ${m.start.getFullYear()}</div>
-        <div class="big num" style="font-size:40px">${eurBig(m.out)}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <span class="pill ${diff>avg*.15?'warn':diff<-avg*.05?'good':'info'}">${diff>=0?'+':'−'}${eur(Math.abs(diff),0)} vs moyenne</span>
-          <span class="pill info">Revenus ${eur(m.inc,0)}</span></div>
-        <p class="muted small" style="margin:14px 0 0">Montant réellement débité ce mois-là : échéances du mois et dépenses courantes (courses, carburant…) réparties sur l'année.</p>
+        <div class="eyebrow">${MONTHS_L[m.start.getMonth()][0].toUpperCase() + MONTHS_L[m.start.getMonth()].slice(1)} ${m.start.getFullYear()} · solde du mois</div>
+        <div class="big num" style="font-size:40px;color:${solde<0?'var(--red)':'var(--fg)'}">${solde>=0?'+':''}${eurBig(solde)}</div>
+        <div class="solde-grid">
+          <div class="kpi"><div class="kpi-l">Rentrées</div><div class="kpi-v num" style="color:var(--green)">${eur(m.inc,0)}</div></div>
+          <div class="kpi"><div class="kpi-l">Sorties</div><div class="kpi-v num">${eur(m.out,0)}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <span class="pill ${diff>avg*.15?'warn':diff<-avg*.05?'good':'info'}">Sorties ${diff>=0?'+':'−'}${eur(Math.abs(diff),0)} vs moyenne</span></div>
+        <p class="muted small" style="margin:14px 0 0">Montants réellement crédités et débités ce mois-là. Les dépenses courantes (courses, carburant…) et les revenus sans date sont répartis sur l'année.</p>
       </section>
       <section>
-        <div class="group-h" style="padding-top:4px"><span>Échéances du mois</span><span class="num">${eur(sum(dated,i=>i.amt))}</span></div>
-        <div class="list">${dated.length? dated.map(i=>`<button class="row press" data-edit="${esc(i.l.id)}"><span class="date-chip"><b>${i.date.getDate()}</b><span>${MONTHS[i.date.getMonth()].replace('.','')}</span></span>
-          <span style="min-width:0"><div class="t">${esc(i.l.label)}</div><div class="s">${CATS[i.l.cat]?.label||'Divers'} · ${FREQ[i.l.freq].label.toLowerCase()}</div></span><span class="v num">${eur(i.amt)}</span></button>`).join('')
-          : '<div class="row"><span></span><span class="muted">Aucune échéance datée ce mois-ci.</span><span></span></div>'}</div>
+        <div class="group-h" style="padding-top:4px"><span>Rentrées du mois</span><span class="num" style="color:var(--green)">+${eur(m.inc)}</span></div>
+        <div class="list">${incs.length ? incs.map(i=>row(i,'+')).join('') : '<div class="row"><span></span><span class="muted">Aucune rentrée ce mois-ci.</span><span></span></div>'}</div>
+        <div class="group-h"><span>Échéances du mois</span><span class="num">${eur(sum(dated,i=>i.amt))}</span></div>
+        <div class="list">${dated.length? dated.map(i=>row(i,'')).join('') : '<div class="row"><span></span><span class="muted">Aucune échéance datée ce mois-ci.</span><span></span></div>'}</div>
         ${spread.length?`<div class="group-h"><span>Dépenses courantes</span><span class="num">${eur(sum(spread,i=>i.amt))}</span></div>
-        <div class="list">${spread.sort((a,b)=>b.amt-a.amt).map(i=>`<button class="row press" data-edit="${esc(i.l.id)}">${tile(i.l.cat)}<span style="min-width:0"><div class="t">${esc(i.l.label)}</div><div class="s">${freqText(i.l)}</div></span><span class="v num">${eur(i.amt)}</span></button>`).join('')}</div>`:''}
+        <div class="list">${spread.sort((a,b)=>b.amt-a.amt).map(i=>row(i,'')).join('')}</div>`:''}
       </section>
     </div>
   </div>`}`;
@@ -1024,6 +1128,19 @@ function viewOnboard(){
     <button class="textbtn press" data-act="signout">Se déconnecter (${esc(state.user?.email||'')})</button>
   </div></div>`;
 }
+/** Photo choisie : recadrée en carré, réduite à 192 px, JPEG (~15 Ko) pour tenir dans le foyer. */
+async function resizePhoto(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; });
+    const S = 192, c = document.createElement('canvas'); c.width = c.height = S;
+    const side = Math.min(img.naturalWidth, img.naturalHeight), sx = (img.naturalWidth - side)/2, sy = (img.naturalHeight - side)/2;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, sx, sy, side, side, 0, 0, S, S);
+    let q = .85, out = c.toDataURL('image/jpeg', q);
+    while(out.length > 70000 && q > .4){ q -= .15; out = c.toDataURL('image/jpeg', q); }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
 function viewFoyer(){
   const fb = !!(F && state.hid), m = state.meta, f = state.form;
   const nameForm = `<section class="card"><div class="card-h"><h2>Nom du foyer</h2></div>
@@ -1037,12 +1154,22 @@ function viewFoyer(){
         : state.fbFailed ? "Le service de synchronisation n'a pas pu être joint. Tes données restent sur cet appareil. Vérifie ta connexion puis recharge l'appli." : 'Tes données restent sur cet appareil.'}</p>
       ${state.fbFailed ? '<div style="margin-top:14px"><button class="btn tint press" data-act="reload">Recharger</button></div>' : ''}</section></div>`;
   }
-  const members = (m.members||[]).map(id => ({ id, email: (m.memberEmails||{})[id] || 'Membre' }));
-  const inv = state.invite;
+  const members = (m.members||[]).map(id => ({ id, email: (m.memberEmails||{})[id] || '', name: profileOf(id).name || '' }));
+  const inv = state.invite, me = state.user.uid, myP = profileOf(me), gPhoto = Store.googlePhoto();
   return `${header('Réglages et partage', esc(m.name||'Foyer'), false)}<div class="stack">
+    <section class="card"><div class="card-h"><h2>Ton profil</h2></div>
+      <div class="profile">${avatar(me, 'xl')}
+        <div class="grow">
+          <form class="inline" id="profile-form" novalidate><input class="inp" id="h-pname" maxlength="40" placeholder="Ton prénom" value="${esc(f['h-pname'] ?? (myP.name||''))}" aria-label="Ton prénom" style="box-shadow:none;background:var(--fill2)"><button class="btn tint press" type="submit">Enregistrer</button></form>
+          <div class="btns" style="gap:8px">
+            <button class="btn gray press" data-act="photo-pick">${ic('camera')}${myP.photo ? 'Changer la photo' : 'Ajouter une photo'}</button>
+            ${gPhoto && myP.photo !== gPhoto ? `<button class="btn gray press" data-act="photo-google">${GOOGLE_G}Photo Google</button>` : ''}
+            ${myP.photo ? '<button class="btn gray press" data-act="photo-remove">Retirer</button>' : ''}
+          </div>
+        </div></div></section>
     <section><div class="group-h" style="padding-top:0"><span>Membres</span><span>${members.length}</span></div>
-      <div class="list">${members.map(x => `<div class="row"><span class="avatar sm">${esc(x.email[0])}</span>
-        <span style="min-width:0"><div class="t">${esc(x.email)}</div><div class="s">${x.id===m.owner ? 'A créé le foyer' : 'Membre'}</div></span>
+      <div class="list">${members.map(x => `<div class="row">${avatar(x.id, 'sm')}
+        <span style="min-width:0"><div class="t">${esc(x.name || x.email || 'Membre')}</div><div class="s">${x.name && x.email ? esc(x.email) + ' · ' : ''}${x.id===m.owner ? 'A créé le foyer' : 'Membre'}</div></span>
         ${x.id===state.user.uid ? '<span class="pill info">Toi</span>' : '<span></span>'}</div>`).join('')}</div></section>
     <section class="card"><div class="card-h"><h2>Inviter ton ou ta partenaire</h2></div>
       ${inv ? `<div class="code" id="invite-code">${fmtCode(inv.code)}</div>
@@ -1053,7 +1180,7 @@ function viewFoyer(){
     </section>
     ${nameForm}
     <section class="card"><div class="card-h"><h2>Compte</h2></div>
-      <div class="row" style="padding:0 0 14px"><span class="avatar sm">${esc((state.user.email||'?')[0])}</span><span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
+      <div class="row" style="padding:0 0 14px">${avatar(me, 'sm')}<span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
       <button class="btn danger press" data-act="signout">Se déconnecter</button></section>
   </div>`;
 }
@@ -1068,7 +1195,7 @@ function render(){
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
   const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer}[state.route] || viewHome;
   main.innerHTML = v();
-  lastPeriodRender = state.period;
+  lastPeriodRender = state.period; lastScopeRender = scopeNow();
 }
 
 /* ================= sheet (add / edit) ================= */
@@ -1076,7 +1203,10 @@ let sheet = null;
 function openSheet(line, kind){
   const editing = !!line;
   sheet = editing ? {...line, amountStr: nf2.format(+line.amount).replace(/ | /g,' ').replace(/,00$/,''), catTouched:true, confirm:false}
-    : {id: uid(), kind: kind || (state.route==='budget'?state.budgetKind:'expense'), label:'', amountStr:'', freq:'monthly', cat:'', catTouched:false, due:'', saved:0, confirm:false, isNew:true};
+    : {id: uid(), kind: kind || (state.route==='budget'?state.budgetKind:'expense'), label:'', amountStr:'', freq:'monthly', cat:'', catTouched:false, due:'', saved:0, pro: state.scope==='pro' && hasPro() ? 100 : 0, confirm:false, isNew:true};
+  sheet.pro = Math.round(+sheet.pro || 0);
+  sheet.nature = sheet.pro===0 ? 'private' : sheet.pro===100 ? 'pro' : 'mixed';
+  sheet.natureTouched = editing;
   const el = $('#sheet');
   el.innerHTML = sheetHTML(editing);
   el.hidden = false; $('#scrim').hidden = false;
@@ -1103,6 +1233,7 @@ function sheetHTML(editing){
     <div class="field"><div class="frow"><input type="text" id="f-label" placeholder="Nom (ex. Assurance auto)" value="${esc(s.label)}" autocomplete="off" aria-label="Nom" maxlength="60"></div></div>
     <div><span class="flabel">Fréquence</span><div class="chips" id="f-freq">${Object.entries(FREQ).map(([k,f])=>`<button class="chip press" data-freq="${k}" aria-pressed="${s.freq===k}">${f.label}</button>`).join('')}</div></div>
     <div><span class="flabel">Catégorie <span class="suggest" id="f-sugg"></span></span><div class="chips" id="f-cats"></div></div>
+    <div><span class="flabel">Nature</span><div id="f-nature"></div></div>
     <div class="field" id="f-dates"></div>
     ${editing?`<div id="f-del">${delHTML()}</div>`:''}
   </div>`;
@@ -1110,10 +1241,32 @@ function sheetHTML(editing){
 const delHTML = () => sheet.confirm
   ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn gray block press" data-act="del-no">Garder</button><button class="btn danger block press" data-act="del-yes">${ic('trash')}Supprimer</button></div>`
   : `<button class="btn danger block press" data-act="del-ask">${ic('trash')}Supprimer cette ligne</button>`;
+function sheetNature(){
+  const s = sheet, keys = ['private','pro','mixed'], i = keys.indexOf(s.nature);
+  const v = parseAmount(s.amountStr), y = isFinite(v) ? v * FREQ[s.freq].perYear : 0;
+  $('#f-nature').innerHTML = `<div class="seg" role="group" aria-label="Nature"><span class="seg-ind" style="width:calc((100% - 4px)/3);transform:translateX(${i*100}%)"></span>
+      <button data-nature="private" aria-pressed="${s.nature==='private'}">Privé</button><button data-nature="pro" aria-pressed="${s.nature==='pro'}">Pro</button><button data-nature="mixed" aria-pressed="${s.nature==='mixed'}">Mixte</button></div>
+    ${s.nature==='mixed' ? `<div class="field" style="margin-top:10px"><div class="range">
+      <div class="range-l"><span>Part professionnelle</span><b class="num" id="f-pro-v">${s.pro} %</b></div>
+      <input type="range" id="f-pro" min="5" max="95" step="5" value="${s.pro}" aria-label="Part professionnelle en pourcentage">
+      <div class="muted small num" id="f-pro-eq">${y ? `≈ ${eur(y*s.pro/100)} pro et ${eur(y*(100-s.pro)/100)} privé par an` : 'Par exemple : voiture utilisée à 40 % pour l\'activité.'}</div></div></div>` : ''}
+    <p class="hint">${s.nature==='private' ? 'Compte uniquement dans le budget privé.' : s.nature==='pro' ? (s.kind==='income' ? 'Revenu de ton activité indépendante.' : 'Frais de ton activité, déductibles le cas échéant.') : 'La part pro compte dans la vue Pro, le reste dans la vue Privé.'}</p>`;
+  const r = $('#f-pro');
+  if(r) r.addEventListener('input', () => { sheet.pro = +r.value; $('#f-pro-v').textContent = r.value + ' %';
+    const v2 = parseAmount(sheet.amountStr), y2 = isFinite(v2) ? v2 * FREQ[sheet.freq].perYear : 0;
+    if(y2) $('#f-pro-eq').textContent = `≈ ${eur(y2*sheet.pro/100)} pro et ${eur(y2*(100-sheet.pro)/100)} privé par an`; });
+}
+function setNature(n, touched = true){
+  sheet.nature = n; if(touched) sheet.natureTouched = true;
+  sheet.pro = n==='private' ? 0 : n==='pro' ? 100 : (sheet.pro > 0 && sheet.pro < 100 ? sheet.pro : 50);
+  sheetNature();
+}
 function sheetCats(){
   const s = sheet; const ids = Object.keys(CATS).filter(k=>CATS[k].kind===s.kind);
   $('#f-cats').innerHTML = ids.map(k=>`<button class="chip cat press" data-cat="${k}" aria-pressed="${s.cat===k}">${tile(k)}${CATS[k].label}</button>`).join('');
   $('#f-sugg').textContent = (!s.catTouched && s.cat) ? '· suggérée' : '';
+  if(!s.natureTouched && CATS[s.cat]?.pro && s.nature!=='pro') setNature('pro', false);
+  else if(!s.natureTouched && s.nature==='pro' && !CATS[s.cat]?.pro && s.pro===100 && !(state.scope==='pro' && hasPro())) setNature('private', false);
 }
 function sheetDates(){
   const s = sheet; const prov = s.kind==='expense' && (s.freq==='once' || (FREQ[s.freq].months||0)>=2);
@@ -1132,6 +1285,7 @@ function sheetConv(){
   const parts = [['week','/ sem.'],['month','/ mois'],['year','/ an']].filter(([p])=>!(s.freq==='weekly'&&p==='week')&&!(s.freq==='monthly'&&p==='month')&&!(s.freq==='annual'&&p==='year'));
   el.innerHTML = parts.map(([p,u])=>`<span class="pill">≈ <b class="num">${eur(y/PERIODS[p].div)}</b> ${u}</span>`).join('');
   $('#f-save').disabled = !(s.label||'').trim();
+  const eq = $('#f-pro-eq'); if(eq && s.nature==='mixed') eq.textContent = `≈ ${eur(y*s.pro/100)} pro et ${eur(y*(100-s.pro)/100)} privé par an`;
 }
 function bindSheet(){
   const a = $('#f-amount'), lab = $('#f-label');
@@ -1139,7 +1293,7 @@ function bindSheet(){
   a.style.width = Math.max(2, (a.value||'0').length+.6)+'ch';
   lab.addEventListener('input', ()=>{ sheet.label = lab.value; if(!sheet.catTouched){ const g = suggestCat(lab.value, sheet.kind); sheet.cat = g||''; sheetCats(); } sheetConv(); });
   [a,lab].forEach(i=>i.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(i===a) lab.focus(); else saveSheet(); } }));
-  sheetCats(); sheetDates(); sheetConv();
+  sheetCats(); sheetNature(); sheetDates(); sheetConv();
   // drag to dismiss (phone)
   const h = $('#sheet-drag'), el = $('#sheet'); let y0=null, dy=0;
   h.addEventListener('pointerdown', e=>{ if(window.matchMedia('(min-width:900px)').matches || e.target.closest('button')) return; y0=e.clientY; dy=0; el.style.transition='none'; h.setPointerCapture(e.pointerId); });
@@ -1154,6 +1308,7 @@ async function saveSheet(){
   if(!(s.label||'').trim()){ toast('Donne un nom à cette ligne'); $('#f-label').focus(); return; }
   const line = { id:s.id, kind:s.kind, label:s.label.trim(), amount: Math.round(amount*100)/100, freq:s.freq,
     cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.due||'', saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
+    pro: s.nature==='private' ? 0 : s.nature==='pro' ? 100 : Math.min(95, Math.max(5, Math.round(+s.pro||50))),
     createdAt: s.createdAt || Date.now() };
   if(s.example) line.example = true;
   const isNew = s.isNew; closeSheet();
@@ -1173,6 +1328,8 @@ document.addEventListener('click', async e => {
   const t = e.target.closest('button,[data-act]'); if(!t) return;
   const d = t.dataset;
   if(d.period) return setPeriod(d.period);
+  if(d.scope){ state.scope = d.scope; ls.set('bf.scope', d.scope); if(state.route==='accueil' && t.classList.contains('link')) window.scrollTo({top:0, behavior:'smooth'}); return render(); }
+  if(d.nature && sheet){ setNature(d.nature); return; }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
   if(d.edit){ const l = state.lines.find(x=>x.id===d.edit); if(l) openSheet(l); return; }
@@ -1187,7 +1344,7 @@ document.addEventListener('click', async e => {
   if(d.fkind && sheet){ sheet.kind = d.fkind; $('#kind-ind').style.transform = `translateX(${d.fkind==='expense'?0:100}%)`;
     document.querySelectorAll('[data-fkind]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.fkind===d.fkind));
     if(!CATS[sheet.cat] || CATS[sheet.cat].kind!==d.fkind){ sheet.cat = suggestCat(sheet.label, d.fkind)||''; sheet.catTouched=false; }
-    sheetCats(); sheetDates(); return; }
+    sheetCats(); sheetNature(); sheetDates(); return; }
   if(d.authtab){ state.authTab = d.authtab; state.formErr = ''; state.formInfo = ''; return render(); }
   switch(d.act){
     case 'reset': { const em = (state.form['a-email']||'').trim(); if(!em){ state.formErr = 'Saisis ton e-mail ci-dessus, puis touche à nouveau « Mot de passe oublié ».'; return render(); }
@@ -1196,6 +1353,9 @@ document.addEventListener('click', async e => {
       try { const p = new F.A.GoogleAuthProvider(); p.setCustomParameters({ prompt:'select_account' }); await F.A.signInWithPopup(F.auth, p); }
       catch(e){ console.warn('Connexion Google', e); if(!['auth/popup-closed-by-user','auth/cancelled-popup-request','auth/user-cancelled'].includes(e.code)) state.formErr = errMsg(e); }
       state.busy = false; return render(); }
+    case 'photo-pick': $('#photo-input').click(); return;
+    case 'photo-google': Store.saveProfile({ ...profileOf(state.user.uid), photo: Store.googlePhoto() }); toast('Photo Google utilisée'); return;
+    case 'photo-remove': { const p0 = { ...profileOf(state.user.uid) }; delete p0.photo; Store.saveProfile(p0); toast('Photo retirée'); return; }
     case 'signout': await Store.signOut(); state.form = {}; state.formErr = ''; location.hash = 'accueil'; return;
     case 'reload': location.reload(); return;
     case 'invite': state.busy = true; render();
@@ -1222,9 +1382,16 @@ document.addEventListener('click', async e => {
 });
 $('#scrim').addEventListener('click', closeSheet);
 document.addEventListener('input', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
+document.addEventListener('change', async e => {
+  if(e.target.id !== 'photo-input' || !e.target.files || !e.target.files[0]) return;
+  const file = e.target.files[0]; e.target.value = '';
+  if(!state.user || !state.hid) return;
+  try { const photo = await resizePhoto(file); Store.saveProfile({ ...profileOf(state.user.uid), photo }); toast('Photo enregistrée'); }
+  catch { toast("Cette image n'a pas pu être lue. Essaie une photo JPEG ou PNG."); }
+});
 document.addEventListener('change', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
 document.addEventListener('submit', async e => {
-  const form = e.target; if(!['auth-form','create-form','join-form','name-form'].includes(form.id)) return;
+  const form = e.target; if(!['auth-form','create-form','join-form','name-form','profile-form'].includes(form.id)) return;
   e.preventDefault(); if(state.busy) return;
   const f = state.form; state.formErr = ''; state.formInfo = '';
   const run = async fn => { state.busy = true; render(); try { await fn(); } catch(err){ console.warn(err); state.formErr = errMsg(err); } state.busy = false; render(); };
@@ -1242,6 +1409,10 @@ document.addEventListener('submit', async e => {
     const code = ($('#o-code').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
     if(code.length !== 8){ state.formErr = errMsg({code:'join/format'}); return render(); }
     await run(async () => { await Store.joinHousehold(code); state.form = {}; toast('Bienvenue dans le foyer'); });
+  }
+  if(form.id==='profile-form'){
+    const name = ($('#h-pname').value||'').trim(); delete f['h-pname']; $('#h-pname').blur();
+    Store.saveProfile({ ...profileOf(state.user.uid), name }); toast('Profil enregistré'); return;
   }
   if(form.id==='name-form'){
     const name = ($('#h-name').value||'').trim(); if(!name) return;
