@@ -342,6 +342,13 @@ body.gate .main{margin-left:0;max-width:none;padding-bottom:calc(32px + env(safe
 .periodbar{display:grid;gap:8px}
 .seg.scope{height:30px}
 .seg.scope button{font-size:12.5px}
+.seg.who button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px}
+.wtag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:650;background:var(--accent-soft);color:var(--accent);vertical-align:1px;margin-left:6px}
+.avatar.xs{width:22px;height:22px;font-size:11px;margin-left:-6px}
+.avatar.xs.common{background:var(--fill);color:var(--fg2)}
+.avatar.xs.common svg{width:13px;height:13px}
+.chip.who[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.chip.who[aria-pressed="true"] .avatar.common{background:color-mix(in srgb,var(--bg) 22%,transparent);color:inherit}
 .ptag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:650;background:color-mix(in srgb,#AF52DE 16%,transparent);color:#9B44C9;vertical-align:1px;margin-left:6px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ptag{color:#D08CF0}}
 :root[data-theme="dark"] .ptag{color:#D08CF0}
@@ -606,12 +613,20 @@ const proPart = l => Math.min(100, Math.max(0, Math.round(+l.pro || 0))) / 100;
 const hasPro = () => state.lines.some(l => proPart(l) > 0);
 const scopeNow = () => hasPro() ? state.scope : 'all';
 /** Part de la ligne qui compte dans la vue choisie (Tout / Privé / Pro). */
-const shareOf = (l, sc = scopeNow()) => sc==='pro' ? proPart(l) : sc==='private' ? 1 - proPart(l) : 1;
+const shareOf = (l, sc = scopeNow()) => !whoMatch(l) ? 0 : sc==='pro' ? proPart(l) : sc==='private' ? 1 - proPart(l) : 1;
+/* Pour qui : ligne commune (who absent) ou attribuée à un membre précis du foyer. */
+const people = () => (F && state.hid && state.meta.members) || [];
+const hasPeople = () => people().length > 1;
+const whoOf = l => l.who && people().includes(l.who) ? l.who : '';
+const whoNow = () => hasPeople() && (state.who==='common' || people().includes(state.who)) ? state.who : 'all';
+const whoMatch = l => { const w = whoNow(); return w==='all' || (w==='common' ? !whoOf(l) : whoOf(l)===w); };
+const firstName = id => { const n = nameOf(id); return (n.includes('@') ? n.split('@')[0] : n.split(/\s+/)[0]) || 'Membre'; };
+const whoLabel = l => { const w = whoOf(l); return w && whoNow()==='all' && hasPeople() ? `<span class="wtag">${esc(firstName(w))}</span>` : ''; };
 const yearlyRaw = l => (l.freq==='multi' && partsOf(l).length ? multiTotal(l) : (+l.amount||0)) * (FREQ[l.freq]?.perYear || 0);
 const yearly = (l, sc) => yearlyRaw(l) * shareOf(l, sc);
 const perPeriod = (l, p=state.period, sc) => yearly(l, sc) / PERIODS[p].div;
 const inScope = (l, sc) => shareOf(l, sc) > 0 && isActive(l);
-const proLabel = l => { const n = Math.round(proPart(l)*100); return n===0 ? '' : n===100 ? '<span class="ptag">Pro</span>' : `<span class="ptag">Pro ${n} %</span>`; };
+const proLabel = l => { const n = Math.round(proPart(l)*100); return whoLabel(l) + (n===0 ? '' : n===100 ? '<span class="ptag">Pro</span>' : `<span class="ptag">Pro ${n} %</span>`); };
 const sum = (arr, f) => arr.reduce((a,x)=>a+f(x),0);
 
 /* ================= formatting ================= */
@@ -745,6 +760,7 @@ const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
   scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
+  who: String(ls.get('bf.who','all') || 'all'),
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
 };
@@ -903,7 +919,7 @@ const Store = {
   lineRef(id, h = state.hid){ return F.S.doc(F.db, 'households', h, 'lines', id); },
   /** Écriture Firestore : appliquée tout de suite en local (et hors ligne), confirmée en arrière-plan. */
   write(p){ p.catch(e => this.fail(e)); return true; },
-  clean(line){ const b = {...line}; delete b.id; if(b.freq !== 'multi') delete b.parts; b.updatedAt = Date.now(); return b; },
+  clean(line){ const b = {...line}; delete b.id; if(b.freq !== 'multi') delete b.parts; if(!b.who) delete b.who; b.updatedAt = Date.now(); return b; },
 
   /* --- local (secours) --- */
   startLocal(){
@@ -1105,8 +1121,17 @@ function periodBar(){
   return `<div class="periodbar"><div class="seg" role="group" aria-label="Période d'affichage">
     <span class="seg-ind" style="width:calc((100% - 4px)/4);transform:translateX(${i*100}%)"></span>
     ${PKEYS.map(k=>`<button data-period="${k}" aria-pressed="${k===state.period}">${PERIODS[k].label}</button>`).join('')}
-  </div>${scopeBar()}</div>`;
+  </div>${scopeBar()}${whoBar()}</div>`;
 }
+function whoBar(){
+  if(!hasPeople()) return '';
+  const keys = ['all', 'common', ...people()], i = keys.indexOf(whoNow());
+  const lab = k => k==='all' ? 'Tous' : k==='common' ? 'Commun' : esc(firstName(k));
+  return `<div class="seg scope who" role="group" aria-label="Pour qui">
+    <span class="seg-ind" style="width:calc((100% - 4px)/${keys.length});transform:translateX(${i*100}%)"></span>
+    ${keys.map(k=>`<button data-who="${esc(k)}" aria-pressed="${k===whoNow()}">${lab(k)}</button>`).join('')}</div>`;
+}
+const filtersBlock = () => (hasPro() || hasPeople()) ? `<div class="periodbar" style="max-width:360px;margin-bottom:14px">${scopeBar()}${whoBar()}</div>` : '';
 function scopeBar(){
   if(!hasPro()) return '';
   const keys = Object.keys(SCOPES), i = keys.indexOf(scopeNow());
@@ -1165,14 +1190,19 @@ function viewHome(){
   const R = 48, C = 2*Math.PI*R; let acc = 0;
   const arcs = exp.map(e => { const f = expTotal ? e.v/expTotal : 0; const gap = exp.length>1 ? 1.6 : 0; const len = Math.max(0, f*C - gap);
     const s = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${e.c.color}" stroke-width="14" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-acc}"/>`; acc += f*C; return s; }).join('');
-  const provLines = state.lines.filter(l => isProvision(l) && isActive(l));
+  const provLines = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l));
   const provMonth = sum(provLines, l=>provisionState(l).needed);
   const late = provLines.filter(l=>provisionState(l).status==='late').length;
   const up = upcoming(5);
-  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()) ? ' swap' : '';
-  const sc = scopeNow();
-  const heroLabel = sc==='pro' ? `Résultat pro ${P_.noun}` : sc==='private' ? `Disponible privé ${P_.noun}` : `Disponible ${P_.noun}`;
-  const heroSub = sc==='pro' ? 'Revenus professionnels moins frais professionnels, avant impôts et cotisations.' : 'Après dépenses, épargne et provisions lissées.';
+  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()+whoNow()) ? ' swap' : '';
+  const sc = scopeNow(), w = whoNow();
+  const whoTxt = w==='all' ? '' : w==='common' ? ' commun' : ` · ${esc(firstName(w))}`;
+  const heroLabel = sc==='pro' ? `Résultat pro${whoTxt} ${P_.noun}` : sc==='private' ? `Disponible privé${whoTxt} ${P_.noun}` : w==='common' ? `Solde commun ${P_.noun}` : `Disponible${whoTxt} ${P_.noun}`;
+  const share = w==='common' && T.free < 0 ? -T.free / people().length : 0;
+  const heroSub = w==='common' ? (share ? `Dépenses communes à financer : ${eur(share)} chacun si vous partagez à parts égales.` : 'Uniquement les revenus et dépenses marqués « Commun ».')
+    : w!=='all' ? `Uniquement les lignes attribuées à ${esc(firstName(w))}, sans les dépenses communes.`
+    : sc==='pro' ? 'Revenus professionnels moins frais professionnels, avant impôts et cotisations.' : 'Après dépenses, épargne et provisions lissées.';
+  const pillTxt = sc==='pro' ? (T.free<0 ? 'En perte' : 'Bénéficiaire') : w==='common' && T.free<0 ? 'À financer' : freeLabel;
   const PT = hasPro() && sc==='all' ? totals(state.period, 'pro') : null;
   return `${header(new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}), esc(state.meta.name||'Budget du Foyer'))}
   ${exampleBanner()}
@@ -1180,7 +1210,7 @@ function viewHome(){
   <div class="grid two">
     <div class="col">
       <section class="card hero">
-        <div class="hero-l">${heroLabel} <span class="pill ${freeTone}">${sc==='pro' ? (T.free<0 ? 'En perte' : 'Bénéficiaire') : freeLabel}</span></div>
+        <div class="hero-l">${heroLabel} <span class="pill ${w==='common' && T.free<0 ? 'warn' : freeTone}">${pillTxt}</span></div>
         <div class="big num${anim}" id="hero-n">${eurBig(T.free)}</div>
         <div class="muted small">${heroSub}</div>
         <div class="split" aria-hidden="true">${segs.filter(s=>s.v>0).map(s=>`<span style="flex-grow:${s.v/base};background:${s.c}"></span>`).join('')}</div>
@@ -1261,7 +1291,7 @@ function viewBudget(){
   const lines = state.lines.filter(l=>l.kind===k && inScope(l));
   const total = sum(lines, l=>perPeriod(l));
   const groups = byCat(k);
-  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()) ? ' swap' : '';
+  const anim = (lastPeriodRender!==state.period || lastScopeRender!==scopeNow()+whoNow()) ? ' swap' : '';
   const scWord = {all:'', private:' privés', pro:' professionnels'}[scopeNow()];
   return `${header('Revenus et dépenses', 'Budget')}
   ${exampleBanner()}
@@ -1302,7 +1332,7 @@ function viewTimeline(){
     <span style="min-width:0"><div class="t">${esc(i.l.label)}${partName(i.part)}${proLabel(i.l)}</div><div class="s">${i.date ? `${CATS[i.l.cat]?.label||'Divers'} · ${i.l.freq==='multi' ? 'mensuel' : FREQ[i.l.freq].label.toLowerCase()}` : `${freqText(i.l)} · réparti sur l'année`}</div></span>
     <span class="v num" style="${sign==='+'?'color:var(--green)':''}">${approx(i.l)}${sign}${eur(i.amt)}</span></button>`;
   return `${header('Rentrées et sorties mois par mois', 'Échéancier', false)}
-  ${hasPro() ? `<div style="max-width:360px;margin-bottom:14px">${scopeBar()}</div>` : ''}
+  ${filtersBlock()}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid">
     <section class="card">
@@ -1339,11 +1369,12 @@ function viewTimeline(){
 }
 
 function viewProvisions(){
-  const L = state.lines.filter(l => isProvision(l) && isActive(l)).map(l=>({l, s:provisionState(l)})).sort((a,b)=>(a.s.due||9e15)-(b.s.due||9e15));
+  const L = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l)).map(l=>({l, s:provisionState(l)})).sort((a,b)=>(a.s.due||9e15)-(b.s.due||9e15));
   const need = sum(L, x=>x.s.needed), saved = sum(L,x=>x.s.saved), target = sum(L,x=>x.s.amount);
   const smooth = sum(L, x=>x.s.smooth);
   return `${header('Dépenses irrégulières lissées', 'Provisions', false)}
   ${exampleBanner()}
+  ${hasPeople() ? `<div class="periodbar" style="max-width:360px;margin-bottom:14px">${whoBar()}</div>` : ''}
   ${!L.length ? `<div class="card empty"><div class="save-ic">${ic('jar')}</div><h2>Aucune provision</h2><p>Les dépenses trimestrielles, semestrielles, annuelles ou ponctuelles apparaissent ici avec le montant à mettre de côté chaque mois.</p><button class="btn primary press" data-act="new">${ic('plus',2.4)}Ajouter une dépense annuelle</button></div>` : `
   <section class="card hero" style="margin-bottom:14px">
     <div class="hero-l">À verser ce mois-ci sur ton compte provisions</div>
@@ -1594,7 +1625,7 @@ function render(){
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
   const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories}[state.route] || viewHome;
   main.innerHTML = v();
-  lastPeriodRender = state.period; lastScopeRender = scopeNow();
+  lastPeriodRender = state.period; lastScopeRender = scopeNow()+whoNow();
 }
 
 /* ================= sheet (add / edit) ================= */
@@ -1603,7 +1634,8 @@ function openSheet(line, kind){
   const editing = !!line;
   const fmtA = v => (isFinite(+v) && +v > 0) ? nf2.format(+v).replace(/\u202f|\u00a0/g,' ').replace(/,00$/,'') : '';
   sheet = editing ? {...line, amountStr: fmtA(line.amount), parts: (line.parts||[]).map(p => ({ day: String(p.day), amount: fmtA(p.amount), label: p.label||'', end: p.end || (line.freq==='multi' ? line.end||'' : '') })), catTouched:true, confirm:false}
-    : {id: uid(), kind: kind || (state.route==='budget'?state.budgetKind:'expense'), label:'', amountStr:'', freq:'monthly', parts:[], variable:false, cat:'', catTouched:false, due:'', saved:0, pro: state.scope==='pro' && hasPro() ? 100 : 0, confirm:false, isNew:true};
+    : {id: uid(), kind: kind || (state.route==='budget'?state.budgetKind:'expense'), label:'', amountStr:'', freq:'monthly', parts:[], variable:false, cat:'', catTouched:false, due:'', saved:0, pro: state.scope==='pro' && hasPro() ? 100 : 0, who: ['all','common'].includes(whoNow()) ? '' : whoNow(), confirm:false, isNew:true};
+  sheet.who = whoOf(sheet);
   sheet.pro = Math.round(+sheet.pro || 0);
   sheet.nature = sheet.pro===0 ? 'private' : sheet.pro===100 ? 'pro' : 'mixed';
   sheet.natureTouched = editing;
@@ -1636,6 +1668,7 @@ function sheetHTML(editing){
     <div id="f-parts"></div>
     <div><span class="flabel">Catégorie <span class="suggest" id="f-sugg"></span></span><div class="chips" id="f-cats"></div></div>
     <div><span class="flabel">Nature</span><div id="f-nature"></div></div>
+    ${hasPeople() ? `<div><span class="flabel">Pour qui</span><div class="chips" id="f-who"></div></div>` : ''}
     <div class="field" id="f-dates"></div>
     ${editing?`<div id="f-del">${delHTML()}</div>`:''}
   </div>`;
@@ -1657,6 +1690,11 @@ function sheetNature(){
   if(r) r.addEventListener('input', () => { sheet.pro = +r.value; $('#f-pro-v').textContent = r.value + ' %';
     const v2 = parseAmount(sheet.amountStr), y2 = isFinite(v2) ? v2 * FREQ[sheet.freq].perYear : 0;
     if(y2) $('#f-pro-eq').textContent = `≈ ${eur(y2*sheet.pro/100)} pro et ${eur(y2*(100-sheet.pro)/100)} privé par an`; });
+}
+function sheetWho(){
+  const box = $('#f-who'); if(!box) return;
+  const s = sheet, keys = ['', ...people()];
+  box.innerHTML = keys.map(k => `<button class="chip who press" data-fwho="${esc(k)}" aria-pressed="${(s.who||'')===k}">${k ? avatar(k, 'xs') : `<span class="avatar xs common">${ic('users',2.2)}</span>`}${k ? esc(firstName(k)) : 'Commun'}</button>`).join('');
 }
 function setNature(n, touched = true){
   sheet.nature = n; if(touched) sheet.natureTouched = true;
@@ -1746,7 +1784,7 @@ function bindSheet(){
   a.style.width = Math.max(2, (a.value||'0').length+.6)+'ch';
   lab.addEventListener('input', ()=>{ sheet.label = lab.value; if(!sheet.catTouched){ const g = suggestCat(lab.value, sheet.kind, sheet.id); sheet.cat = g ? g.id : ''; sheet.why = g ? g.why : ''; sheetCats(); } sheetConv(); });
   [a,lab].forEach(i=>i.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(i===a) lab.focus(); else saveSheet(); } }));
-  sheetCats(); sheetNature(); sheetDates(); sheetParts(); sheetConv();
+  sheetCats(); sheetNature(); sheetWho(); sheetDates(); sheetParts(); sheetConv();
   $('#f-var').addEventListener('change', e => { sheet.variable = e.target.checked; });
   const box = $('#f-parts');
   const onPart = e => { const t = e.target; if(!t.dataset || t.dataset.pi == null) return; sheet.parts[+t.dataset.pi][t.dataset.pf] = t.value;
@@ -1784,6 +1822,7 @@ async function saveSheet(){
     cat: s.cat || (s.kind==='income'?'autres':'divers'), due: s.freq==='multi' ? '' : (s.due||''), end: (s.freq==='once' || s.freq==='multi') ? '' : (s.end||''), saved: isProvision({kind:s.kind,freq:s.freq}) ? Math.max(0, +s.saved||0) : 0,
     pro: s.nature==='private' ? 0 : s.nature==='pro' ? 100 : Math.min(95, Math.max(5, Math.round(+s.pro||50))),
     variable: !!s.variable,
+    who: hasPeople() && people().includes(s.who) ? s.who : '',
     createdAt: s.createdAt || Date.now() };
   if(parts) line.parts = parts;
   if(s.example) line.example = true;
@@ -1807,6 +1846,8 @@ document.addEventListener('click', async e => {
   if(d.period) return setPeriod(d.period);
   if(d.scope){ state.scope = d.scope; ls.set('bf.scope', d.scope); if(state.route==='accueil' && t.classList.contains('link')) window.scrollTo({top:0, behavior:'smooth'}); return render(); }
   if(d.nature && sheet){ setNature(d.nature); return; }
+  if(d.fwho !== undefined && sheet){ sheet.who = d.fwho; sheetWho(); return; }
+  if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
   if(d.edit){ const l = state.lines.find(x=>x.id===d.edit); if(l) openSheet(l); return; }

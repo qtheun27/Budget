@@ -151,6 +151,12 @@ test('part professionnelle : 0 à 100 acceptée, hors limites refusée', async (
   await assertFails(setDoc(doc(db, 'households/h1/lines/p3'), { ...line, pro: 140 }));
   await assertFails(setDoc(doc(db, 'households/h1/lines/p4'), { ...line, pro: 'beaucoup' }));
 });
+test('ligne attribuée à un membre du foyer, pas à un étranger', async () => {
+  const db = as('A');
+  await assertSucceeds(setDoc(doc(db, 'households/h1/lines/w1'), { ...line, who: 'A' }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/w2'), { ...line, who: 'Q' }));
+  await assertFails(setDoc(doc(db, 'households/h1/lines/w3'), { ...line, who: 42 }));
+});
 test('date de fin des paiements acceptée, format invalide refusé', async () => {
   const db = as('A');
   await assertSucceeds(setDoc(doc(db, 'households/h1/lines/e1'), { ...line, freq: 'monthly', end: '2028-03-01' }));

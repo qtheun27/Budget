@@ -3,7 +3,7 @@ rules_version = '2';
 // Budget du Foyer — règles Firestore
 //
 // households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, memberProfiles{uid: {name, photo}}, createdAt
-// households/{hid}/lines/{id}  lignes de budget
+// households/{hid}/lines/{id}  lignes de budget (who : membre concerné, absent = commun)
 // users/{uid}                  { householdId, notify } : le foyer de chaque compte et ses réglages de rappels
 // users/{uid}/devices/{id}     appareils abonnés aux notifications (Web Push)
 // server/*                     réservé à l'envoi des rappels (aucun accès depuis l'appli)
@@ -74,7 +74,7 @@ service cloud.firestore {
       // ---------- lignes de budget ----------
       match /lines/{lineId} {
         allow read: if isMember(hid);
-        allow create, update: if isMember(hid) && validLine(request.resource.data);
+        allow create, update: if isMember(hid) && validLine(request.resource.data, hid);
         allow delete: if isMember(hid);
       }
     }
@@ -109,8 +109,9 @@ service cloud.firestore {
         && (!('custom' in c) || c.custom is bool);
     }
 
-    function validLine(d) {
-      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'end', 'parts', 'variable', 'saved', 'pro', 'example', 'createdAt', 'updatedAt'])
+    // who : ligne attribuée à un membre précis du foyer (absent = commune).
+    function validLine(d, hid) {
+      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'end', 'parts', 'variable', 'saved', 'pro', 'who', 'example', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['kind', 'label', 'amount', 'freq', 'cat'])
         && d.kind in ['income', 'expense']
         && d.label is string && d.label.size() > 0 && d.label.size() <= 60
@@ -123,6 +124,7 @@ service cloud.firestore {
         && (!('end' in d) || (d.end is string && d.end.size() <= 10))
         && (!('saved' in d) || ((d.saved is int || d.saved is float) && d.saved >= 0 && d.saved < 10000000))
         && (!('pro' in d) || (d.pro is int && d.pro >= 0 && d.pro <= 100))
+        && (!('who' in d) || (d.who is string && d.who in household(hid).members))
         && (!('example' in d) || d.example is bool)
         && (!('createdAt' in d) || d.createdAt is int || d.createdAt is float)
         && (!('updatedAt' in d) || d.updatedAt is int || d.updatedAt is float);

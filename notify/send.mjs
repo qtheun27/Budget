@@ -7,6 +7,7 @@
 //   - « le jour même » : paiements dont l'échéance est aujourd'hui
 //   - « 3 jours avant » : paiements dont l'échéance tombe dans 3 jours
 //   - option « rentrées » : mêmes règles pour les revenus attendus
+// Les lignes attribuées à un membre précis ne sont rappelées qu'à ce membre ; les lignes communes, à tous.
 // Une seule notification groupée par compte et par jour, envoyée à tous ses appareils.
 //
 // Options : --dry-run (affiche sans envoyer ni écrire), --force (renvoie même si déjà fait aujourd'hui)
@@ -107,6 +108,7 @@ async function main() {
     const today = [], soon = [];
     for (const l of linesCache.get(user.householdId)) {
       if (l.kind === 'income' && !prefs.income) continue;
+      if (l.who && l.who !== uid) continue;   // ligne personnelle d'un autre membre : pas de rappel pour moi
       if (l.freq === 'multi') {
         const mk = p => ({ label: p.label ? `${l.label} (${p.label})` : l.label, amount: +p.amount, kind: l.kind, approx: !!l.variable });
         if (prefs.sameDay) partsOn(l, t).forEach(p => today.push(mk(p)));
