@@ -286,6 +286,38 @@ button.row:hover{background:var(--fill2)}
   .row.wide{grid-template-columns:auto minmax(0,1fr) 150px 120px 130px}
   .row.wide .meta{display:block;font-size:13.5px;color:var(--fg2);text-align:right;white-space:nowrap}
 }
+
+/* ---------- compte, foyer ---------- */
+body.gate .side,body.gate .tabbar{display:none}
+body.gate .main{margin-left:0;max-width:none;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+.gate-wrap{min-height:calc(100dvh - 48px);display:grid;place-items:center;padding-block:24px}
+.gate-card{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+.gate-brand{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:6px}
+.gate-brand .brand-mark{width:68px;height:68px;border-radius:19px;box-shadow:0 10px 30px color-mix(in srgb,var(--accent) 30%,transparent)}
+.gate-brand .brand-mark svg{width:38px;height:38px}
+.gate-brand h1{font-size:30px}
+.gate-brand p{margin:0;color:var(--fg2);max-width:32ch}
+.form{display:flex;flex-direction:column;gap:10px}
+.inp{width:100%;height:50px;border:0;border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:0 16px;font-size:16px;outline:none;color:var(--fg)}
+.inp:focus{box-shadow:0 0 0 2px var(--accent)}
+.inp::placeholder{color:var(--fg3)}
+.err{color:var(--red);font-size:13.5px;min-height:18px;padding:0 4px}
+.err:empty{min-height:0}
+.textbtn{color:var(--accent);font-weight:550;font-size:14.5px;align-self:center;padding:6px 8px}
+.btn:disabled{opacity:.55}
+.or{display:flex;align-items:center;gap:12px;color:var(--fg3);font-size:13px}
+.or::before,.or::after{content:"";flex:1;height:.5px;background:var(--sep)}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--fg2);padding:2px 4px}
+.check input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+.code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:.14em;text-align:center;padding:18px 10px;border-radius:16px;background:var(--accent-soft);color:var(--accent);user-select:all;-webkit-user-select:all}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#7B5CFF));color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;text-decoration:none;text-transform:uppercase;flex:none}
+.avatar.sm{width:34px;height:34px;font-size:14px}
+@media (min-width:900px){.m-only{display:none!important}}
+.stack{display:flex;flex-direction:column;gap:14px;max-width:640px}
+.inline{display:flex;gap:10px}
+.inline .inp{flex:1;min-width:0}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btns .btn{flex:1}
 </style>
 
 <div id="app">
@@ -367,6 +399,8 @@ const P = {
   gift:'<rect x="4" y="11" width="16" height="9.5" rx="1.5"/><path d="M3 7.5h18V11H3zM12 7.5v13M12 7.5C10 3.5 6.5 4.5 7.5 7.5M12 7.5c2-4 5.5-3 4.5 0"/>',
   coin:'<circle cx="12" cy="12" r="8"/><path d="M15 9.2a3.5 3.5 0 1 0 0 5.6M8 11h5M8 13h5"/>',
   trash:'<path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l.8 12.2a1.5 1.5 0 0 0 1.5 1.3h6.4a1.5 1.5 0 0 0 1.5-1.3L17.5 7"/>',
+  users:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.3"/>',
+  copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/>'
 };
 const ic = (n, sw=1.9) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
@@ -410,7 +444,8 @@ const ROUTES = [
   {id:'accueil',label:'Accueil',icon:'home'},
   {id:'budget',label:'Budget',icon:'list'},
   {id:'echeancier',label:'Échéancier',icon:'cal'},
-  {id:'provisions',label:'Provisions',icon:'jar'}
+  {id:'provisions',label:'Provisions',icon:'jar'},
+  {id:'foyer',label:'Foyer',icon:'users'}
 ];
 
 const isProvision = l => l.kind==='expense' && (l.freq==='once' || (FREQ[l.freq]?.months||0) >= 2);
@@ -481,27 +516,119 @@ function suggestCat(label, kind){
 const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d : JSON.parse(v); }catch{ return d; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} } };
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
-  route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false,
+  route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
 };
 const TEMPLATE = JSON.parse(document.getElementById('tpl').textContent);
 const uid = () => 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-let DB = null;
+let DB = null;   // base partagée claude.ai (aperçu)
+let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
+const FB_VERSION = '10.14.1';
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCxNdvZAiAtrg3xYtE2cqMaWOpwPX-C6fI',
+  authDomain: 'budget-foyer-qt.firebaseapp.com',
+  projectId: 'budget-foyer-qt',
+  storageBucket: 'budget-foyer-qt.firebasestorage.app',
+  messagingSenderId: '523514248590',
+  appId: '1:523514248590:web:9c81dd05779cdf25db38df'
+};
+const ERR = {
+  'auth/invalid-credential':'E-mail ou mot de passe incorrect.', 'auth/wrong-password':'E-mail ou mot de passe incorrect.', 'auth/user-not-found':'Aucun compte avec cet e-mail.',
+  'auth/email-already-in-use':'Un compte existe déjà avec cet e-mail. Connecte-toi.', 'auth/weak-password':'Mot de passe trop court : 6 caractères minimum.',
+  'auth/invalid-email':'Adresse e-mail invalide.', 'auth/missing-password':'Saisis ton mot de passe.', 'auth/too-many-requests':'Trop de tentatives. Réessaie dans quelques minutes.',
+  'auth/network-request-failed':'Pas de connexion internet.', 'auth/operation-not-allowed':"La connexion par e-mail n'est pas encore activée.", 'auth/configuration-not-found':"La connexion par e-mail n'est pas encore activée.",
+  'join/not-found':"Ce code n'existe pas. Vérifie-le avec la personne qui l'a créé.", 'join/used':'Ce code a déjà été utilisé. Demande un nouveau code.',
+  'join/expired':'Ce code a expiré. Demande un nouveau code.', 'join/format':'Le code fait 8 caractères, par exemple K7QM-4XPT.',
+  'permission-denied':"Accès refusé. Ce code n'est peut-être plus valable.", 'unavailable':'Pas de connexion internet.'
+};
+const errMsg = e => ERR[e && e.code] || 'Une erreur est survenue, réessaie.';
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode = () => { const r = new Uint32Array(8); crypto.getRandomValues(r); return [...r].map(x=>CODE_ABC[x % CODE_ABC.length]).join(''); };
+const fmtCode = c => c.slice(0,4) + '-' + c.slice(4);
+const localImportable = () => (ls.get('bf.lines', null) || []).filter(l => !l.example);
+let pendingRender = false;
+const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#main') && /^(INPUT|TEXTAREA)$/.test(a.tagName)); };
+/** Rendu déclenché par des données reçues : différé pendant la saisie pour ne pas voler le focus. */
+function renderData(){ if(typing()){ pendingRender = true; return; } render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if(pendingRender && !typing()){ pendingRender = false; render(); } }, 0));
 
 const Store = {
+  unsubs: [], hUnsubs: [],
   async init(){
-    const slowT = setTimeout(()=>{ if(state.mode==='loading' || state.mode==='cloud-wait'){ state.slow = true; render(); } }, 10000);
+    this.slowT = setTimeout(()=>{ if(state.mode==='loading' || state.mode==='cloud-wait'){ state.slow = true; render(); } }, 10000);
+    if(IN_CLAUDE) return this.initClaude();
+    try { await this.initFirebase(); }
+    catch(e){ console.warn('Firebase indisponible', e); clearTimeout(this.slowT); state.fbFailed = true; this.startLocal(); }
+  },
+
+  /* --- aperçu claude.ai : base partagée de l'artefact --- */
+  async initClaude(){
     let db = null;
-    try { db = (window.claude && typeof window.claude.use==='function') ? await window.claude.use('db') : null; } catch { db = null; }
-    if(!db){ clearTimeout(slowT); return this.startLocal(); }
+    try { db = await window.claude.use('db'); } catch { db = null; }
+    if(!db){ clearTimeout(this.slowT); return this.startLocal(); }
     DB = db; state.mode = 'cloud-wait'; render();
     db.collection('lines').onSnapshot(snap => {
       state.lines = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-      if(!snap.metadata.fromCache){ clearTimeout(slowT); state.slow = false; }
-      state.mode = 'cloud'; render();
-    }, err => { clearTimeout(slowT); state.mode = 'error'; state.err = err; render(); });
-    db.doc('meta/household').onSnapshot(s => { if(s.exists){ state.meta = {...state.meta, ...s.data()}; render(); } }, ()=>{});
+      if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; }
+      state.mode = 'cloud'; renderData();
+    }, err => { clearTimeout(this.slowT); state.mode = 'error'; state.err = err; render(); });
+    db.doc('meta/household').onSnapshot(s => { if(s.exists){ state.meta = {...state.meta, ...s.data()}; renderData(); } }, ()=>{});
   },
+
+  /* --- appli installée : Firebase (Auth + Firestore europe-west1, cache hors ligne) --- */
+  async initFirebase(){
+    const base = `https://www.gstatic.com/firebasejs/${FB_VERSION}/`;
+    const [appM, A, S] = await Promise.all(['firebase-app.js','firebase-auth.js','firebase-firestore.js'].map(f => import(base + f)));
+    const app = appM.initializeApp(FIREBASE_CONFIG);
+    const auth = A.initializeAuth(app, { persistence: [A.indexedDBLocalPersistence, A.browserLocalPersistence] });
+    auth.languageCode = 'fr';
+    let db;
+    try { db = S.initializeFirestore(app, { localCache: S.persistentLocalCache({ tabManager: S.persistentMultipleTabManager() }) }); }
+    catch { db = S.getFirestore(app); }
+    F = { app, auth, db, A, S };
+    A.onAuthStateChanged(auth, u => this.onUser(u));
+  },
+  stop(){ [...this.unsubs, ...this.hUnsubs].forEach(u => { try { u(); } catch {} }); this.unsubs = []; this.hUnsubs = []; },
+  onUser(u){
+    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' };
+    if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
+    state.user = { uid:u.uid, email:u.email || '' }; state.mode = 'loading'; render();
+    const { S } = F;
+    this.unsubs.push(S.onSnapshot(S.doc(F.db, 'users', u.uid), snap => {
+      const h = snap.exists() ? snap.data().householdId : null;
+      if(!h){ if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; state.mode = 'onboard'; render(); } return; }
+      if(h !== state.hid) this.watchHousehold(h);
+    }, err => this.fbError(err)));
+  },
+  watchHousehold(h){
+    this.hUnsubs.forEach(u => u()); this.hUnsubs = [];
+    state.hid = h; const { S } = F;
+    this.hUnsubs.push(S.onSnapshot(S.doc(F.db, 'households', h), snap => {
+      if(!snap.exists()) return;
+      const d = snap.data();
+      state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {} };
+      renderData();
+    }, err => this.fbError(err)));
+    this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'lines'), { includeMetadataChanges:true }, snap => {
+      state.lines = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      state.offline = snap.metadata.fromCache;
+      if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; }
+      state.mode = 'cloud'; renderData();
+    }, err => this.fbError(err)));
+  },
+  fbError(err){
+    console.warn(err); clearTimeout(this.slowT);
+    if(err && err.code === 'permission-denied' && state.user){ this.hUnsubs.forEach(u=>u()); this.hUnsubs = []; state.hid = null; state.mode = 'onboard'; }
+    else { state.mode = 'error'; state.err = err; }
+    render();
+  },
+  lineRef(id, h = state.hid){ return F.S.doc(F.db, 'households', h, 'lines', id); },
+  /** Écriture Firestore : appliquée tout de suite en local (et hors ligne), confirmée en arrière-plan. */
+  write(p){ p.catch(e => this.fail(e)); return true; },
+  clean(line){ const b = {...line}; delete b.id; b.updatedAt = Date.now(); return b; },
+
+  /* --- local (secours) --- */
   startLocal(){
     const saved = ls.get('bf.lines', null);
     state.lines = saved ?? TEMPLATE.map(t => ({ id: uid(), saved:0, example:true, ...t }));
@@ -509,26 +636,75 @@ const Store = {
     state.mode = 'local'; render();
   },
   persistLocal(){ ls.set('bf.lines', state.lines); },
+
+  /* --- opérations communes --- */
   async save(line){
-    const body = {...line}; delete body.id; body.updatedAt = Date.now();
+    if(F && state.hid) return this.write(F.S.setDoc(this.lineRef(line.id), this.clean(line)));
+    const body = this.clean(line);
     if(DB){ try { await DB.collection('lines').doc(line.id).set(body); return true; } catch(e){ return this.fail(e); } }
     const i = state.lines.findIndex(l=>l.id===line.id);
     if(i>=0) state.lines[i] = {...line, ...body}; else state.lines.push({...line, ...body});
     this.persistLocal(); render(); return true;
   },
   async remove(id){
+    if(F && state.hid) return this.write(F.S.deleteDoc(this.lineRef(id)));
     if(DB){ try { await DB.collection('lines').doc(id).delete(); return true; } catch(e){ return this.fail(e); } }
     state.lines = state.lines.filter(l=>l.id!==id); this.persistLocal(); render(); return true;
   },
+  async bulkSave(lines, h = state.hid){
+    if(F && h){ for(let i=0; i<lines.length; i+=400){ const b = F.S.writeBatch(F.db); lines.slice(i,i+400).forEach(l => b.set(this.lineRef(l.id, h), this.clean(l))); this.write(b.commit()); } return true; }
+    if(DB){ for(const l of lines) await this.save(l); return true; }
+    const ids = new Set(lines.map(l=>l.id)); state.lines = [...state.lines.filter(x=>!ids.has(x.id)), ...lines.map(l=>({...l, updatedAt:Date.now()}))];
+    this.persistLocal(); render(); return true;
+  },
+  async bulkRemove(ids){
+    if(F && state.hid){ for(let i=0; i<ids.length; i+=400){ const b = F.S.writeBatch(F.db); ids.slice(i,i+400).forEach(id => b.delete(this.lineRef(id))); this.write(b.commit()); } return true; }
+    if(DB){ for(const id of ids) await this.remove(id); return true; }
+    const set = new Set(ids); state.lines = state.lines.filter(l=>!set.has(l.id)); this.persistLocal(); render(); return true;
+  },
   async saveMeta(patch){
     state.meta = {...state.meta, ...patch};
+    if(F && state.hid) return this.write(F.S.updateDoc(F.S.doc(F.db, 'households', state.hid), patch));
     if(DB){ try { await DB.doc('meta/household').set(state.meta); } catch(e){ this.fail(e); } } else ls.set('bf.meta', state.meta);
     render();
   },
   fail(e){
     const c = e && e.code;
-    toast(c==='invalid_argument' ? "Tu n'as pas le droit de modifier ce budget" : c==='quota_exceeded' ? 'Espace de stockage plein' : "Échec de l'enregistrement, réessaie");
+    toast(c==='invalid_argument' || c==='permission-denied' ? "Tu n'as pas le droit de modifier ce budget" : c==='quota_exceeded' || c==='resource-exhausted' ? 'Limite de stockage atteinte' : "Échec de l'enregistrement, réessaie");
     return false;
+  },
+
+  /* --- compte et foyer (Firebase) --- */
+  signIn(email, pw){ return F.A.signInWithEmailAndPassword(F.auth, email, pw); },
+  signUp(email, pw){ return F.A.createUserWithEmailAndPassword(F.auth, email, pw); },
+  reset(email){ return F.A.sendPasswordResetEmail(F.auth, email); },
+  signOut(){ return F.A.signOut(F.auth); },
+  async createHousehold(name, importLines){
+    const { S } = F; const me = state.user.uid;
+    const ref = S.doc(S.collection(F.db, 'households'));
+    const b = S.writeBatch(F.db);
+    b.set(ref, { name, owner:me, members:[me], memberEmails:{ [me]: state.user.email }, createdAt:S.serverTimestamp() });
+    b.set(S.doc(F.db, 'users', me), { householdId: ref.id });
+    await b.commit();
+    if(importLines && importLines.length) await this.bulkSave(importLines.map(l => ({...l, example:false})), ref.id);
+  },
+  async joinHousehold(code){
+    const { S } = F; const me = state.user.uid;
+    const inv = await S.getDoc(S.doc(F.db, 'invites', code));
+    if(!inv.exists()) throw { code:'join/not-found' };
+    const d = inv.data();
+    if(d.usedBy) throw { code:'join/used' };
+    if(d.expiresAt.toMillis() < Date.now()) throw { code:'join/expired' };
+    const b = S.writeBatch(F.db);
+    b.update(S.doc(F.db, 'households', d.hid), { members:S.arrayUnion(me), ['memberEmails.' + me]: state.user.email, joinCode: code });
+    b.update(S.doc(F.db, 'invites', code), { usedBy: me });
+    b.set(S.doc(F.db, 'users', me), { householdId: d.hid });
+    await b.commit();
+  },
+  async createInvite(){
+    const { S } = F; const code = genCode(); const expires = Date.now() + 7*86400000;
+    await S.setDoc(S.doc(F.db, 'invites', code), { hid: state.hid, createdBy: state.user.uid, createdAt: S.serverTimestamp(), expiresAt: S.Timestamp.fromMillis(expires), usedBy: null });
+    return { code, expires };
   }
 };
 
@@ -578,14 +754,19 @@ let lastPeriodRender = state.period;
 function renderNav(){
   const cur = state.route;
   $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
-  const t = ROUTES.map(r=>`<a class="tab press" href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`);
+  const t = ROUTES.slice(0,4).map(r=>`<a class="tab press" href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`);
   t.splice(2,0,`<button class="tab-add press" data-act="new" aria-label="Nouvelle ligne">${ic('plus',2.4)}</button>`);
   $('#tabbar').innerHTML = t.join('');
-  const s = state.mode==='error' ? ['error','Synchronisation interrompue'] : state.slow ? ['slow','Connexion lente…'] : state.mode==='cloud' ? ['cloud','Synchronisé · partagé'] : state.mode==='local' ? ['local','Sur cet appareil'] : ['loading','Connexion…'];
+  const fb = !!(F && state.hid); const n = (state.meta.members||[]).length;
+  const s = state.mode==='error' ? ['error','Synchronisation interrompue'] : state.slow ? ['slow','Connexion lente…']
+    : state.mode==='cloud' ? (state.offline ? ['slow','Hors ligne · enregistré sur l\'appareil'] : ['cloud', fb ? `Synchronisé · ${n} membre${n>1?'s':''}` : 'Synchronisé · partagé'])
+    : state.mode==='local' ? ['local','Sur cet appareil'] : ['loading','Connexion…'];
   const el = $('#sync-side'); el.dataset.s = s[0]; el.querySelector('span').textContent = s[1];
-  $('#share-hint').innerHTML = state.mode==='cloud'
+  $('#share-hint').innerHTML = fb
+    ? (n > 1 ? `<b>Foyer partagé.</b> Vos modifications se synchronisent en direct.` : `<b>Seul pour l'instant.</b> Invite ton ou ta partenaire depuis <a class="link" href="#foyer">Foyer</a>.`)
+    : state.mode==='cloud'
     ? '<b>Budget à deux.</b> Partage cette page avec ton ou ta partenaire en accès <b>Contributeur</b> : vos modifications se synchronisent en direct.'
-    : '<b>Données locales.</b> Elles restent sur cet appareil. La synchronisation à deux arrive avec la version connectée.';
+    : '<b>Données locales.</b> Elles restent sur cet appareil.';
   $('#side-name').textContent = state.meta.name || 'Budget du Foyer';
 }
 
@@ -600,7 +781,7 @@ const isDesk = () => window.matchMedia('(min-width:900px)').matches;
 function header(eyebrow, title, withPeriod=true){
   const d = isDesk();
   return `<header class="ph"><div class="ph-t"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div>
-    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}</div></header>
+    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="${state.user?'avatar':'icon-btn'} m-only press" href="#foyer" aria-label="Foyer et compte">${state.user ? esc((state.user.email||'?')[0]) : ic('users')}</a>` : ''}</div></header>
     ${withPeriod && !d ? periodBar() : ''}`;
 }
 function exampleBanner(){
@@ -795,12 +976,83 @@ function viewProvisions(){
     </article>`; }).join('')}</div>`}`;
 }
 
+function viewAuth(){
+  const t = state.authTab || 'in', f = state.form;
+  return `<div class="gate-wrap"><div class="gate-card">
+    <div class="gate-brand"><span class="brand-mark">${ic('logo',2.1)}</span><h1>Budget du Foyer</h1>
+      <p>${t==='up' ? 'Crée ton compte pour partager ton budget avec ton foyer.' : 'Connecte-toi pour retrouver ton budget sur tous tes appareils.'}</p></div>
+    <div class="seg" role="group" aria-label="Compte"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${t==='in'?0:100}%)"></span>
+      <button data-authtab="in" aria-pressed="${t==='in'}">Se connecter</button><button data-authtab="up" aria-pressed="${t==='up'}">Créer un compte</button></div>
+    <form class="form" id="auth-form" novalidate>
+      <input class="inp" id="a-email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="Adresse e-mail" value="${esc(f['a-email']||'')}">
+      <input class="inp" id="a-pw" name="password" type="password" autocomplete="${t==='up'?'new-password':'current-password'}" placeholder="${t==='up'?'Mot de passe (6 caractères minimum)':'Mot de passe'}" value="${esc(f['a-pw']||'')}">
+      <div class="err" role="alert">${esc(state.formErr||'')}</div>
+      <button class="btn primary block press" type="submit" ${state.busy?'disabled':''}>${state.busy ? 'Un instant…' : t==='up' ? 'Créer mon compte' : 'Se connecter'}</button>
+    </form>
+    ${t==='in' ? '<button class="textbtn press" data-act="reset">Mot de passe oublié ?</button>' : ''}
+    ${state.formInfo ? `<div class="banner" style="margin:0">${esc(state.formInfo)}</div>` : ''}
+  </div></div>`;
+}
+function viewOnboard(){
+  const f = state.form, local = localImportable();
+  return `<div class="gate-wrap"><div class="gate-card">
+    <div class="gate-brand"><span class="brand-mark">${ic('users',2.1)}</span><h1>Ton foyer</h1>
+      <p>Crée le budget de ton foyer, ou rejoins celui de ton ou ta partenaire avec son code d'invitation.</p></div>
+    <form class="form" id="create-form" novalidate><span class="flabel">Créer un foyer</span>
+      <input class="inp" id="o-name" maxlength="40" placeholder="Nom du foyer" value="${esc(f['o-name'] ?? 'Notre foyer')}">
+      ${local.length ? `<label class="check"><input type="checkbox" id="o-import" ${f['o-import']===false?'':'checked'}>Importer les ${local.length} ligne${local.length>1?'s':''} déjà saisie${local.length>1?'s':''} sur cet appareil</label>` : ''}
+      <button class="btn primary block press" type="submit" ${state.busy?'disabled':''}>Créer notre foyer</button></form>
+    <div class="or">ou</div>
+    <form class="form" id="join-form" novalidate><span class="flabel">Rejoindre un foyer</span>
+      <input class="inp" id="o-code" placeholder="Code, par exemple K7QM-4XPT" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="9" value="${esc(f['o-code']||'')}" style="letter-spacing:.08em;text-transform:uppercase">
+      <button class="btn gray block press" type="submit" ${state.busy?'disabled':''}>Rejoindre</button></form>
+    <div class="err" role="alert">${esc(state.formErr||'')}</div>
+    <button class="textbtn press" data-act="signout">Se déconnecter (${esc(state.user?.email||'')})</button>
+  </div></div>`;
+}
+function viewFoyer(){
+  const fb = !!(F && state.hid), m = state.meta, f = state.form;
+  const nameForm = `<section class="card"><div class="card-h"><h2>Nom du foyer</h2></div>
+    <form class="inline" id="name-form" novalidate><input class="inp" id="h-name" maxlength="40" value="${esc(f['h-name'] ?? (m.name||''))}" aria-label="Nom du foyer" style="box-shadow:none;background:var(--fill2)">
+    <button class="btn tint press" type="submit">Enregistrer</button></form></section>`;
+  if(!fb){
+    return `${header('Réglages', 'Foyer', false)}<div class="stack">${nameForm}
+      <section class="card"><div class="card-h"><h2>${state.mode==='cloud' ? 'Budget partagé' : 'Données sur cet appareil'}</h2></div>
+      <p class="muted" style="margin:0">${state.mode==='cloud'
+        ? "Cet aperçu se partage depuis le menu Partager de la page : ajoute ton ou ta partenaire en accès Contributeur. Pour l'appli installable avec comptes et code d'invitation, ouvre la version en ligne."
+        : state.fbFailed ? "Le service de synchronisation n'a pas pu être joint. Tes données restent sur cet appareil. Vérifie ta connexion puis recharge l'appli." : 'Tes données restent sur cet appareil.'}</p>
+      ${state.fbFailed ? '<div style="margin-top:14px"><button class="btn tint press" data-act="reload">Recharger</button></div>' : ''}</section></div>`;
+  }
+  const members = (m.members||[]).map(id => ({ id, email: (m.memberEmails||{})[id] || 'Membre' }));
+  const inv = state.invite;
+  return `${header('Réglages et partage', esc(m.name||'Foyer'), false)}<div class="stack">
+    <section><div class="group-h" style="padding-top:0"><span>Membres</span><span>${members.length}</span></div>
+      <div class="list">${members.map(x => `<div class="row"><span class="avatar sm">${esc(x.email[0])}</span>
+        <span style="min-width:0"><div class="t">${esc(x.email)}</div><div class="s">${x.id===m.owner ? 'A créé le foyer' : 'Membre'}</div></span>
+        ${x.id===state.user.uid ? '<span class="pill info">Toi</span>' : '<span></span>'}</div>`).join('')}</div></section>
+    <section class="card"><div class="card-h"><h2>Inviter ton ou ta partenaire</h2></div>
+      ${inv ? `<div class="code" id="invite-code">${fmtCode(inv.code)}</div>
+        <p class="muted small" style="margin:10px 0 14px;text-align:center">Valable jusqu'au ${new Date(inv.expires).toLocaleDateString('fr-BE',{day:'numeric',month:'long'})}, une seule utilisation.</p>
+        <div class="btns"><button class="btn tint press" data-act="copy-code">${ic('copy')}Copier</button>${navigator.share ? `<button class="btn primary press" data-act="share-code">${ic('share')}Envoyer</button>` : ''}</div>`
+      : `<p class="muted" style="margin:0 0 14px">Crée un code et envoie-le. Ton ou ta partenaire crée son compte dans l'appli, choisit « Rejoindre un foyer » et le saisit. Vous voyez ensuite le même budget, en direct.</p>
+        <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
+    </section>
+    ${nameForm}
+    <section class="card"><div class="card-h"><h2>Compte</h2></div>
+      <div class="row" style="padding:0 0 14px"><span class="avatar sm">${esc((state.user.email||'?')[0])}</span><span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
+      <button class="btn danger press" data-act="signout">Se déconnecter</button></section>
+  </div>`;
+}
+
 function render(){
   renderNav();
   const main = $('#main');
+  document.body.classList.toggle('gate', state.mode==='auth' || state.mode==='onboard');
+  if(state.mode==='auth'){ main.innerHTML = viewAuth(); return; }
+  if(state.mode==='onboard'){ main.innerHTML = viewOnboard(); return; }
   if(state.mode==='loading' || state.mode==='cloud-wait'){ main.innerHTML = loading(); return; }
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
-  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions}[state.route] || viewHome;
+  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer}[state.route] || viewHome;
   main.innerHTML = v();
   lastPeriodRender = state.period;
 }
@@ -922,7 +1174,18 @@ document.addEventListener('click', async e => {
     document.querySelectorAll('[data-fkind]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.fkind===d.fkind));
     if(!CATS[sheet.cat] || CATS[sheet.cat].kind!==d.fkind){ sheet.cat = suggestCat(sheet.label, d.fkind)||''; sheet.catTouched=false; }
     sheetCats(); sheetDates(); return; }
+  if(d.authtab){ state.authTab = d.authtab; state.formErr = ''; state.formInfo = ''; return render(); }
   switch(d.act){
+    case 'reset': { const em = (state.form['a-email']||'').trim(); if(!em){ state.formErr = 'Saisis ton e-mail ci-dessus, puis touche à nouveau « Mot de passe oublié ».'; return render(); }
+      try { await Store.reset(em); state.formErr=''; state.formInfo = `Un e-mail pour choisir un nouveau mot de passe a été envoyé à ${em}.`; } catch(e){ state.formErr = errMsg(e); } return render(); }
+    case 'signout': await Store.signOut(); state.form = {}; state.formErr = ''; location.hash = 'accueil'; return;
+    case 'reload': location.reload(); return;
+    case 'invite': state.busy = true; render();
+      try { state.invite = await Store.createInvite(); } catch(e){ toast(errMsg(e)); } state.busy = false; return render();
+    case 'copy-code': { const c = fmtCode(state.invite.code);
+      try { await navigator.clipboard.writeText(c); toast('Code copié'); } catch { const el = $('#invite-code'); const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Code sélectionné, copie-le'); } return; }
+    case 'share-code': { const c = fmtCode(state.invite.code);
+      try { await navigator.share({ title:'Budget du Foyer', text:`Rejoins notre budget « ${state.meta.name} » sur Budget du Foyer. Crée ton compte, choisis « Rejoindre un foyer » et saisis le code ${c}`, url: location.origin + location.pathname }); } catch {} return; }
     case 'new': return openSheet(null, d.kind);
     case 'close': return closeSheet();
     case 'save': return saveSheet();
@@ -932,17 +1195,44 @@ document.addEventListener('click', async e => {
     case 'clear-ask': state.confirmClear = true; return render();
     case 'clear-cancel': state.confirmClear = false; return render();
     case 'clear-yes': { state.confirmClear = false; const ex = state.lines.filter(l=>l.example);
-      if(DB){ for(const l of ex){ await Store.remove(l.id); } } else { state.lines = state.lines.filter(l=>!l.example); Store.persistLocal(); render(); }
+      await Store.bulkRemove(ex.map(l=>l.id));
       toast('Exemples effacés. À toi de jouer !'); return; }
     case 'template': { const add = TEMPLATE.map(t=>({id:uid(), saved:0, example:true, ...t, createdAt:Date.now()}));
-      if(DB){ for(const l of add) await Store.save(l); } else { state.lines = add; Store.persistLocal(); render(); }
+      await Store.bulkSave(add);
       toast('Budget type chargé, adapte-le à ta famille'); return; }
   }
 });
 $('#scrim').addEventListener('click', closeSheet);
+document.addEventListener('input', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
+document.addEventListener('change', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
+document.addEventListener('submit', async e => {
+  const form = e.target; if(!['auth-form','create-form','join-form','name-form'].includes(form.id)) return;
+  e.preventDefault(); if(state.busy) return;
+  const f = state.form; state.formErr = ''; state.formInfo = '';
+  const run = async fn => { state.busy = true; render(); try { await fn(); } catch(err){ console.warn(err); state.formErr = errMsg(err); } state.busy = false; render(); };
+  if(form.id==='auth-form'){
+    const em = ($('#a-email').value||'').trim(), pw = $('#a-pw').value||''; f['a-email'] = em; f['a-pw'] = pw;
+    if(!em || !pw){ state.formErr = 'Saisis ton e-mail et ton mot de passe.'; return render(); }
+    await run(async () => { if((state.authTab||'in')==='up') await Store.signUp(em, pw); else await Store.signIn(em, pw); f['a-pw'] = ''; });
+  }
+  if(form.id==='create-form'){
+    const name = ($('#o-name').value||'').trim() || 'Notre foyer';
+    const imp = $('#o-import') ? $('#o-import').checked : false;
+    await run(async () => { await Store.createHousehold(name.slice(0,40), imp ? localImportable() : []); state.form = {}; toast(`Foyer « ${name} » créé`); });
+  }
+  if(form.id==='join-form'){
+    const code = ($('#o-code').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(code.length !== 8){ state.formErr = errMsg({code:'join/format'}); return render(); }
+    await run(async () => { await Store.joinHousehold(code); state.form = {}; toast('Bienvenue dans le foyer'); });
+  }
+  if(form.id==='name-form'){
+    const name = ($('#h-name').value||'').trim(); if(!name) return;
+    delete f['h-name']; $('#h-name').blur(); await Store.saveMeta({ name: name.slice(0,40) }); toast('Nom enregistré');
+  }
+});
 document.addEventListener('keydown', e => {
   if(sheet){ if(e.key==='Escape') closeSheet(); return; }
-  if(e.target.closest('input,textarea,select') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.target.closest('input,textarea,select') || e.metaKey || e.ctrlKey || e.altKey || document.body.classList.contains('gate')) return;
   const k = e.key.toUpperCase();
   if(k==='N'){ e.preventDefault(); openSheet(); return; }
   const p = PKEYS.find(x=>PERIODS[x].key===k); if(p) setPeriod(p);
@@ -951,7 +1241,7 @@ let mqDesk = window.matchMedia('(min-width:900px)'); mqDesk.addEventListener?.('
 window.addEventListener('hashchange', route);
 
 /* PWA: offline + installable when served from its own host */
-if('serviceWorker' in navigator && location.protocol==='https:' && !window.claude){
+if('serviceWorker' in navigator && location.protocol==='https:' && !IN_CLAUDE){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 }
 

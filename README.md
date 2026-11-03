@@ -24,5 +24,22 @@ Appli web installable (PWA) de budget familial. On encode chaque revenu ou dépe
 Settings → Pages → Deploy from a branch → `main` / racine. L'appli est alors installable depuis Safari
 (Partager → « Sur l'écran d'accueil ») ou Chrome.
 
-## Données
-Version GitHub Pages : stockées sur l'appareil (localStorage). La synchronisation à plusieurs est prévue en V2.
+## Données et partage (V2)
+- **Firebase** (projet `budget-foyer-qt`, plan gratuit) : comptes e-mail + mot de passe, Firestore en **europe-west1 (Belgique)**
+  avec cache hors ligne. Chaque compte appartient à un **foyer** ; on invite son ou sa partenaire avec un code
+  à usage unique valable 7 jours (écran **Foyer**).
+- Structure : `households/{id}` (nom, membres), `households/{id}/lines/{id}` (lignes de budget), `users/{uid}`, `invites/{code}`.
+- Sécurité : `firestore.rules`. Seuls les membres d'un foyer lisent et écrivent ses données ; on ne rejoint un foyer
+  qu'en consommant un code valide dans la même écriture. Les lignes sont validées champ par champ.
+- Si Firebase est injoignable au premier lancement, l'appli bascule sur un stockage local.
+
+## Tester les règles de sécurité
+```bash
+npm --prefix tests install
+firebase emulators:exec --only firestore --project budget-foyer-test "npm --prefix tests test"
+```
+
+## Déployer les règles
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```

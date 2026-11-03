@@ -1,0 +1,128 @@
+rules_version = '2';
+
+// Budget du Foyer — règles Firestore
+//
+// households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, createdAt
+// households/{hid}/lines/{id}  lignes de budget
+// users/{uid}                  { householdId } : le foyer de chaque compte
+// invites/{code}               code d'invitation à usage unique, expire après 7 jours
+//
+// Principe : seuls les membres d'un foyer lisent et écrivent ses données.
+// On ne rejoint un foyer qu'en consommant un code d'invitation valide dans la même écriture groupée.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function household(hid) { return get(/databases/$(database)/documents/households/$(hid)).data; }
+    function householdAfter(hid) { return getAfter(/databases/$(database)/documents/households/$(hid)).data; }
+    function isMember(hid) { return signedIn() && me() in household(hid).members; }
+    function validEmail(e) { return e is string && e.size() <= 254; }
+
+    // ---------- foyers ----------
+    match /households/{hid} {
+      allow get: if isMember(hid);
+      allow list: if false;
+
+      // Création : je suis le seul membre et le propriétaire.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'owner', 'members', 'memberEmails', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40
+        && request.resource.data.owner == me()
+        && request.resource.data.members == [me()]
+        && request.resource.data.memberEmails.keys().hasOnly([me()])
+        && validEmail(request.resource.data.memberEmails[me()])
+        && request.resource.data.createdAt == request.time;
+
+      // Un membre renomme le foyer.
+      allow update: if isMember(hid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40;
+
+      // Rejoindre : je m'ajoute moi seul, avec un code valide pour CE foyer, consommé dans la même écriture.
+      allow update: if signedIn()
+        && !(me() in resource.data.members)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberEmails', 'joinCode'])
+        && request.resource.data.members.hasAll(resource.data.members)
+        && request.resource.data.members.size() == resource.data.members.size() + 1
+        && me() in request.resource.data.members
+        && request.resource.data.members.size() <= 6
+        && request.resource.data.memberEmails.diff(resource.data.memberEmails).affectedKeys().hasOnly([me()])
+        && validEmail(request.resource.data.memberEmails[me()])
+        && request.resource.data.joinCode is string
+        && validInviteFor(request.resource.data.joinCode, hid);
+
+      allow delete: if false;
+
+      // ---------- lignes de budget ----------
+      match /lines/{lineId} {
+        allow read: if isMember(hid);
+        allow create, update: if isMember(hid) && validLine(request.resource.data);
+        allow delete: if isMember(hid);
+      }
+    }
+
+    function validInviteFor(code, hid) {
+      let inv = get(/databases/$(database)/documents/invites/$(code)).data;
+      let invAfter = getAfter(/databases/$(database)/documents/invites/$(code)).data;
+      return inv.hid == hid
+        && inv.usedBy == null
+        && inv.expiresAt > request.time
+        && invAfter.usedBy == me();
+    }
+
+    function validLine(d) {
+      return d.keys().hasOnly(['kind', 'label', 'amount', 'freq', 'cat', 'due', 'saved', 'example', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['kind', 'label', 'amount', 'freq', 'cat'])
+        && d.kind in ['income', 'expense']
+        && d.label is string && d.label.size() > 0 && d.label.size() <= 60
+        && (d.amount is int || d.amount is float) && d.amount > 0 && d.amount < 10000000
+        && d.freq in ['weekly', 'monthly', 'bimonthly', 'quarterly', 'semiannual', 'annual', 'once']
+        && d.cat is string && d.cat.size() <= 40
+        && (!('due' in d) || (d.due is string && d.due.size() <= 10))
+        && (!('saved' in d) || ((d.saved is int || d.saved is float) && d.saved >= 0 && d.saved < 10000000))
+        && (!('example' in d) || d.example is bool)
+        && (!('createdAt' in d) || d.createdAt is int || d.createdAt is float)
+        && (!('updatedAt' in d) || d.updatedAt is int || d.updatedAt is float);
+    }
+
+    // ---------- comptes ----------
+    match /users/{uid} {
+      allow read: if signedIn() && me() == uid;
+      // Je ne peux pointer que vers un foyer dont je suis membre (après l'écriture groupée).
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['householdId'])
+        && request.resource.data.householdId is string
+        && me() in householdAfter(request.resource.data.householdId).members;
+      allow delete: if signedIn() && me() == uid;
+    }
+
+    // ---------- invitations ----------
+    match /invites/{code} {
+      // Lire un code précis (pas lister) : il faut le connaître.
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn()
+        && code.size() == 8
+        && request.resource.data.keys().hasOnly(['hid', 'createdBy', 'createdAt', 'expiresAt', 'usedBy'])
+        && isMember(request.resource.data.hid)
+        && request.resource.data.createdBy == me()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt <= request.time + duration.value(8, 'd')
+        && request.resource.data.usedBy == null;
+
+      // Consommer : une seule fois, par moi, et seulement si je deviens membre dans la même écriture.
+      allow update: if signedIn()
+        && resource.data.usedBy == null
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy'])
+        && request.resource.data.usedBy == me()
+        && me() in householdAfter(resource.data.hid).members;
+
+      allow delete: if signedIn() && resource.data.createdBy == me();
+    }
+  }
+}
