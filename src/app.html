@@ -620,7 +620,9 @@ const endDate = l => (l.freq!=='once' && l.end) ? parseDate(l.end) : null;
 const isActive = (l, at = today0()) => { const e = endDate(l); if(e && e < at) return false; return l.freq!=='multi' || !partsOf(l).length || activeParts(l, at).length > 0; };
 /* Plusieurs prélèvements par mois : chaque prélèvement a son jour, son montant et un libellé facultatif. */
 const partsOf = l => (Array.isArray(l.parts) ? l.parts : []).filter(p => +p.day >= 1 && +p.day <= 31 && +p.amount > 0);
-const partActive = (p, at = today0()) => !p.end || parseDate(p.end) >= at;
+/** Date complète et plausible (une année en cours de frappe comme « 0002 » ne compte pas). */
+const validDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v||'') && +v.slice(0,4) >= 2000 && +v.slice(0,4) <= 2100;
+const partActive = (p, at = today0()) => !validDate(p.end) || parseDate(p.end) >= at;
 const activeParts = (l, at) => partsOf(l).filter(p => partActive(p, at));
 const multiTotal = (l, at) => sum(activeParts(l, at), p => +p.amount);
 const dayIn = (y, m, day) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
@@ -631,7 +633,7 @@ function multiOccurrences(l, start, end){
   let y = start.getFullYear(), m = start.getMonth();
   for(let i = 0; i < 400; i++){
     if(new Date(y, m, 1) >= end) break;
-    ps.forEach(p => { const d = dayIn(y, m, +p.day), pe = p.end ? parseDate(p.end) : null; if(d >= start && d < end && (!e || d <= e) && (!pe || d <= pe)) out.push({ date:d, amt:+p.amount, part:p }); });
+    ps.forEach(p => { const d = dayIn(y, m, +p.day), pe = validDate(p.end) ? parseDate(p.end) : null; if(d >= start && d < end && (!e || d <= e) && (!pe || d <= pe)) out.push({ date:d, amt:+p.amount, part:p }); });
     if(++m > 11){ m = 0; y++; }
   }
   return out.sort((a,b) => a.date - b.date || b.amt - a.amt);
@@ -649,7 +651,7 @@ function nextDue(l, from = today0()){
 /** Paiements restants jusqu'à la date de fin : nombre et montant. */
 function remaining(l){
   if(l.freq==='multi' && !endDate(l)){
-    const t = today0(), ended = partsOf(l).filter(p => p.end);
+    const t = today0(), ended = partsOf(l).filter(p => validDate(p.end));
     if(!ended.length) return null;
     const last = ended.map(p => parseDate(p.end)).reduce((a,b) => a > b ? a : b);
     const occ = multiOccurrences({ ...l, parts: ended }, t, new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1));
@@ -1212,7 +1214,7 @@ function endingSoon(){
   const items = [];
   state.lines.filter(l => inScope(l)).forEach(l => {
     if(endDate(l) && endDate(l) <= lim) items.push({ l, e:endDate(l), per: perPeriod(l), r: remaining(l) });
-    else if(l.freq==='multi') activeParts(l).filter(p => p.end && parseDate(p.end) <= lim).forEach(p => {
+    else if(l.freq==='multi') activeParts(l).filter(p => validDate(p.end) && parseDate(p.end) <= lim).forEach(p => {
       const occ = multiOccurrences({ ...l, parts:[p] }, t, new Date(parseDate(p.end).getTime() + 86400000));
       items.push({ l, part:p, e:parseDate(p.end), per: (+p.amount) * 12 * shareOf(l) / PERIODS[state.period].div, r:{ count:occ.length, total:sum(occ, o => o.amt) } });
     });
@@ -1651,7 +1653,7 @@ function sheetCats(){
   if(!s.natureTouched && CATS[s.cat]?.pro && s.nature!=='pro') setNature('pro', false);
   else if(!s.natureTouched && s.nature==='pro' && !CATS[s.cat]?.pro && s.pro===100 && !(state.scope==='pro' && hasPro())) setNature('private', false);
 }
-const partsTotal = () => sum((sheet.parts || []).filter(p => !p.end || parseDate(p.end) >= today0()), p => { const v = parseAmount(p.amount); return isFinite(v) && v > 0 ? v : 0; });
+const partsTotal = () => sum((sheet.parts || []).filter(p => partActive(p)), p => { const v = parseAmount(p.amount); return isFinite(v) && v > 0 ? v : 0; });
 function sheetParts(){
   const s = sheet, box = $('#f-parts'), a = $('#f-amount');
   if(s.freq !== 'multi'){ box.innerHTML = ''; if(a){ a.readOnly = false; a.title = ''; } return; }
@@ -1664,7 +1666,7 @@ function sheetParts(){
       ${s.parts.length > 1 ? `<button class="prm press" data-prm="${i}" aria-label="Retirer ce prélèvement">${ic('close',2.4)}</button>` : '<span></span>'}
       <div class="prow2"><input class="plabel" data-pi="${i}" data-pf="label" maxlength="30" placeholder="Libellé (ex. Crédit 1)" value="${esc(p.label)}">
         <label class="pend"><span>Fin</span><input type="date" data-pi="${i}" data-pf="end" value="${esc(p.end||'')}" aria-label="Fin du prélèvement ${i+1} (facultatif)"></label></div>
-      ${p.end && parseDate(p.end) < today0() ? `<span class="ended">Terminé en ${monthYear(parseDate(p.end))} : ne compte plus dans le budget.</span>` : ''}
+      <span class="ended" data-ended="${i}"${partActive(p) ? ' hidden' : ''}>${partActive(p) ? '' : `Terminé en ${monthYear(parseDate(p.end))} : ne compte plus dans le budget.`}</span>
     </div>`).join('')}
     <div class="parts-foot">${s.parts.length < 12 ? '<button class="textbtn press" data-act="part-add" style="padding:6px 0">+ Ajouter un prélèvement</button>' : '<span></span>'}<span class="num">Total <b>${eur(partsTotal())}</b> / mois</span></div></div>`;
   syncPartsTotal();
@@ -1696,12 +1698,13 @@ function sheetEndInfo(){
   const s = sheet, v = parseAmount(s.amountStr);
   if(s.freq==='once'){ el.textContent = ''; return; }
   if(s.freq==='multi'){
-    const ps = (s.parts||[]).map(p => ({ day:+p.day, amount:parseAmount(p.amount), label:p.label, end:p.end })).filter(p => p.end);
+    const ps = (s.parts||[]).map(p => ({ day:+p.day, amount:parseAmount(p.amount), label:p.label, end:p.end })).filter(p => validDate(p.end));
     if(!ps.length){ el.textContent = "Fin : facultative, par prélèvement. Utile si tes crédits ne se terminent pas en même temps."; return; }
     const r = remaining({ freq:'multi', parts:ps });
     el.textContent = r && r.count ? `Prélèvements avec une fin : ${r.count} paiement${r.count>1?'s':''} restant${r.count>1?'s':''}, soit ${eur(r.total)} jusqu'en ${monthYear(r.last)}.` : 'Les prélèvements avec une date de fin sont terminés.';
     return;
   }
+  if(s.end && !validDate(s.end)){ el.textContent = ''; return; }
   if(!s.end){ el.textContent = 'Fin des paiements : facultative. Pour un crédit, un leasing ou une location, indique la date du dernier paiement.'; return; }
   if(s.due && s.end < s.due){ el.innerHTML = '<span style="color:var(--red)">La fin des paiements est avant la prochaine échéance.</span>'; return; }
   const r = remaining({ freq:s.freq, due:s.due, end:s.end, amount: isFinite(v) ? v : 0, parts: (s.parts||[]).map(p => ({ day:+p.day, amount: parseAmount(p.amount) })) });
@@ -1729,7 +1732,12 @@ function bindSheet(){
   $('#f-var').addEventListener('change', e => { sheet.variable = e.target.checked; });
   const box = $('#f-parts');
   const onPart = e => { const t = e.target; if(!t.dataset || t.dataset.pi == null) return; sheet.parts[+t.dataset.pi][t.dataset.pf] = t.value;
-    if(t.dataset.pf === 'end'){ if(e.type === 'change'){ sheetParts(); sheetEndInfo(); } return; }
+    if(t.dataset.pf === 'end'){
+      // Mise à jour sur place : redessiner la liste ferait perdre la saisie de l'année.
+      const p = sheet.parts[+t.dataset.pi], note = document.querySelector(`[data-ended="${t.dataset.pi}"]`);
+      if(note){ const done = !partActive(p); note.hidden = !done; note.textContent = done ? `Terminé en ${monthYear(parseDate(p.end))} : ne compte plus dans le budget.` : ''; }
+      syncPartsTotal(); sheetEndInfo(); return;
+    }
     if(t.dataset.pf !== 'label'){ syncPartsTotal(); sheetEndInfo(); } };
   box.addEventListener('input', onPart); box.addEventListener('change', onPart);
   // drag to dismiss (phone)
@@ -1744,9 +1752,12 @@ async function saveSheet(){
   const amount = parseAmount(s.amountStr);
   if(!isFinite(amount) || amount<=0){ toast('Indique un montant'); $('#f-amount').focus(); return; }
   if(!(s.label||'').trim()){ toast('Donne un nom à cette ligne'); $('#f-label').focus(); return; }
+  if((s.due && s.freq!=='multi' && !validDate(s.due)) || (s.end && s.freq!=='once' && s.freq!=='multi' && !validDate(s.end))){ toast('Date incomplète : vérifie l\'année'); return; }
   if(s.end && s.due && s.end < s.due && s.freq!=='once' && s.freq!=='multi'){ toast('La fin des paiements doit être après la prochaine échéance'); return; }
   let parts = null;
   if(s.freq==='multi'){
+    const badEnd = s.parts.findIndex(p => p.end && !validDate(p.end));
+    if(badEnd >= 0){ toast(`Prélèvement ${badEnd+1} : date de fin incomplète`); return; }
     const bad = s.parts.findIndex(p => !(+p.day >= 1) || !(parseAmount(p.amount) > 0));
     if(!s.parts.length || bad >= 0){ toast(bad >= 0 ? `Prélèvement ${bad+1} : choisis le jour et le montant` : 'Ajoute au moins un prélèvement'); return; }
     parts = s.parts.map(p => { const o = { day:+p.day, amount: Math.round(parseAmount(p.amount)*100)/100 }; if(p.label.trim()) o.label = p.label.trim().slice(0,30); if(p.end) o.end = p.end; return o; });
