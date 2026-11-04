@@ -235,6 +235,15 @@ button.row:hover{background:var(--fill2)}
 
 .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--accent-soft);color:var(--fg);font-size:13.5px;margin-bottom:14px}
 .banner .btn{height:32px;font-size:13px;border-radius:9px}
+.banner.warn{background:color-mix(in srgb,var(--orange) 16%,transparent)}
+.banner>span{display:flex;gap:8px;align-items:flex-start;flex:1;min-width:0}
+.banner>span>svg{width:17px;height:17px;flex:none;margin-top:1px;color:var(--orange)}
+.banner .mini{margin:-4px -4px -4px 0}
+.admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.admin-kpis .skel{height:92px}
+.kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
+.inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
 
 .empty{text-align:center;padding:40px 20px}
 .empty .save-ic{margin:0 auto 14px;width:56px;height:56px;border-radius:16px}
@@ -781,7 +790,7 @@ const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
   scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
-  who: String(ls.get('bf.who','all') || 'all'),
+  who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null,
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
 };
@@ -791,6 +800,11 @@ let DB = null;   // base partagée claude.ai (aperçu)
 let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
+/** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
+const BUILD = +'1793829659' || 0;
+/** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
+const ADMIN_EMAIL = 'q.theuninck@gmail.com';
+const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyCxNdvZAiAtrg3xYtE2cqMaWOpwPX-C6fI',
   authDomain: 'budget-foyer-qt.firebaseapp.com',
@@ -874,8 +888,10 @@ const Store = {
   onUser(u){
     this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false; catDocs = {}; rebuildCats();
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
-    state.user = { uid:u.uid, email:u.email || '' }; state.mode = 'loading'; render();
+    state.user = { uid:u.uid, email:u.email || '', verified: !!u.emailVerified }; state.mode = 'loading'; render();
     const { S } = F;
+    // Réglages de l'appli publiés depuis la console d'administration (message, inscriptions, version).
+    this.unsubs.push(S.onSnapshot(S.doc(F.db, 'config', 'app'), snap => { state.config = snap.exists() ? snap.data() : {}; renderData(); }, () => {}));
     this.unsubs.push(S.onSnapshot(S.doc(F.db, 'users', u.uid), { includeMetadataChanges:true }, snap => {
       // Attendre la confirmation du serveur : un foyer tout juste créé ou rejoint n'est lisible qu'après.
       if(snap.metadata.hasPendingWrites) return;
@@ -883,6 +899,9 @@ const Store = {
       state.notify = { ...NOTIFY_DEFAULT, ...((snap.exists() && snap.data().notify) || {}) };
       if(!h){ if(!snap.metadata.fromCache){ clearTimeout(this.slowT); state.slow = false; state.mode = 'onboard'; render(); } return; }
       if(h !== state.hid) this.watchHousehold(h);
+      // Dernier passage (une fois par jour) : sert uniquement au comptage des comptes actifs.
+      const day = iso(today0());
+      if(!snap.metadata.fromCache && snap.data().seen !== day && this.seenDay !== day){ this.seenDay = day; S.updateDoc(S.doc(F.db, 'users', u.uid), { seen: day }).catch(() => {}); }
     }, err => this.fbError(err)));
   },
   watchHousehold(h, attempt = 0){
@@ -996,6 +1015,28 @@ const Store = {
     if(F && state.hid) return this.write(F.S.updateDoc(F.S.doc(F.db, 'households', state.hid), patch));
     if(DB){ try { await DB.doc('meta/household').set(state.meta); } catch(e){ this.fail(e); } } else ls.set('bf.meta', state.meta);
     render();
+  },
+  /** Réglages globaux (administrateur). Les règles refusent toute autre adresse. */
+  saveConfig(patch){
+    const { S } = F; state.config = { ...state.config, ...patch }; render();
+    return this.write(S.setDoc(S.doc(F.db, 'config', 'app'), { ...patch, updatedAt: S.serverTimestamp(), updatedBy: state.user.email }, { merge:true }));
+  },
+  /** Comptages pour la console : comptes, foyers, activité, appareils. Jamais le contenu des budgets. */
+  async adminStats(){
+    const { S } = F;
+    const [users, devices, stats] = await Promise.all([
+      S.getDocs(S.collection(F.db, 'users')),
+      S.getCountFromServer(S.collectionGroup(F.db, 'devices')),
+      S.getDoc(S.doc(F.db, 'admin', 'stats')).catch(() => null),
+    ]);
+    const t = today0(), ago = n => iso(new Date(t.getFullYear(), t.getMonth(), t.getDate() - n));
+    const U = users.docs.map(d => d.data()), byH = new Map();
+    U.forEach(u => { if(u.householdId) byH.set(u.householdId, (byH.get(u.householdId)||0) + 1); });
+    return {
+      users: U.length, households: byH.size, shared: [...byH.values()].filter(n => n > 1).length,
+      today: U.filter(u => u.seen === iso(t)).length, week: U.filter(u => (u.seen||'') >= ago(6)).length, month: U.filter(u => (u.seen||'') >= ago(29)).length,
+      devices: devices.data().count, server: stats && stats.exists() ? stats.data() : null, at: new Date(),
+    };
   },
   fail(e){
     const c = e && e.code;
@@ -1120,7 +1161,7 @@ let lastPeriodRender = state.period, lastScopeRender = 'all';
 
 function renderNav(){
   const cur = state.route;
-  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur || (r.id==='foyer' && cur==='categories')?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
+  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur || (r.id==='foyer' && (cur==='categories' || cur==='admin'))?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
   const t = ROUTES.slice(0,4).map(r=>`<a class="tab press" href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`);
   t.splice(2,0,`<button class="tab-add press" data-act="new" aria-label="Nouvelle ligne">${ic('plus',2.4)}</button>`);
   $('#tabbar').innerHTML = t.join('');
@@ -1457,10 +1498,10 @@ function viewOnboard(){
   return `<div class="gate-wrap"><div class="gate-card">
     <div class="gate-brand"><span class="brand-mark">${ic('users',2.1)}</span><h1>Ton foyer</h1>
       <p>Crée le budget de ton foyer, ou rejoins celui de ton ou ta partenaire avec son code d'invitation.</p></div>
-    <form class="form" id="create-form" novalidate><span class="flabel">Créer un foyer</span>
+    ${state.config.signups === false && !isAdmin() ? `<div class="form"><span class="flabel">Créer un foyer</span><p class="muted small" style="margin:0">La création de nouveaux foyers est fermée pour le moment. Tu peux rejoindre un foyer existant avec un code d'invitation.</p></div>` : `<form class="form" id="create-form" novalidate><span class="flabel">Créer un foyer</span>
       <input class="inp" id="o-name" maxlength="40" placeholder="Nom du foyer" value="${esc(f['o-name'] ?? 'Notre foyer')}">
       ${local.length ? `<label class="check"><input type="checkbox" id="o-import" ${f['o-import']===false?'':'checked'}>Importer les ${local.length} ligne${local.length>1?'s':''} déjà saisie${local.length>1?'s':''} sur cet appareil</label>` : ''}
-      <button class="btn primary block press" type="submit" ${state.busy?'disabled':''}>Créer notre foyer</button></form>
+      <button class="btn primary block press" type="submit" ${state.busy?'disabled':''}>Créer notre foyer</button></form>`}
     <div class="or">ou</div>
     <form class="form" id="join-form" novalidate><span class="flabel">Rejoindre un foyer</span>
       <input class="inp" id="o-code" placeholder="Code, par exemple K7QM-4XPT" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="9" value="${esc(f['o-code']||'')}" style="letter-spacing:.08em;text-transform:uppercase">
@@ -1643,6 +1684,7 @@ function viewFoyer(){
         <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
     </section>
     ${catsEntry()}
+    ${isAdmin() ? adminEntry() : ''}
     ${nameForm}
     ${remindersCard()}
     <section class="card"><div class="card-h"><h2>Compte</h2></div>
@@ -1651,6 +1693,67 @@ function viewFoyer(){
   </div>`;
 }
 
+/* ================= bandeaux globaux & console d'administration ================= */
+function appBanners(){
+  const c = state.config || {}, out = [];
+  if(BUILD && +c.minBuild > BUILD) out.push(`<div class="banner"><span><b>Nouvelle version disponible.</b> Mets à jour pour profiter des dernières améliorations.</span><button class="btn primary press" data-act="app-update">Mettre à jour</button></div>`);
+  const b = c.banner;
+  if(b && b.on && b.text && ls.get('bf.banner', '') !== b.id) out.push(`<div class="banner${b.tone==='warn' ? ' warn' : ''}"><span>${b.tone==='warn' ? ic('bolt',2.1) : ''}${esc(b.text)}</span><button class="mini press" data-act="banner-close" aria-label="Masquer ce message">${ic('close')}</button></div>`);
+  return out.join('');
+}
+function adminEntry(){
+  return `<a class="card save-card press" href="#admin" style="text-decoration:none;color:inherit">
+    <span class="save-ic">${ic('shield')}</span><span class="grow"><strong>Console d'administration</strong><br><span class="muted small">Utilisateurs, message à tous, inscriptions, rappels et mises à jour</span></span>
+    <span class="chev">${ic('chev')}</span></a>`;
+}
+async function loadAdmin(){
+  state.admin = { ...(state.admin||{}), loading:true, err:'' }; if(state.route==='admin') render();
+  try { state.admin = { data: await Store.adminStats(), loading:false }; }
+  catch(e){ console.warn(e); state.admin = { ...(state.admin||{}), loading:false, err: e && e.code==='permission-denied' ? "Accès refusé : connecte-toi avec ton compte Google pour confirmer ton adresse." : errMsg(e) }; }
+  if(state.route==='admin') render();
+}
+const fmtWhen = d => d ? d.toLocaleDateString('fr-BE',{day:'numeric',month:'long',year:'numeric'}) + ', ' + d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'}) : '—';
+function viewAdmin(){
+  const A = state.admin || {}, d = A.data, c = state.config || {}, b = c.banner || {};
+  const msg = state.adminMsg ?? (b.text || ''), tone = state.adminTone || b.tone || 'info';
+  const kpi = (l, v, s) => `<div class="kpi"><div class="kpi-l">${l}</div><div class="kpi-v num">${v}</div>${s ? `<div class="kpi-s">${s}</div>` : ''}</div>`;
+  const srv = d && d.server, run = srv && srv.run, srvAt = srv && srv.at && srv.at.toDate ? srv.at.toDate() : null;
+  const sw = (id, on, t, sub) => `<div class="setrow"><div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label></div>`;
+  const pushed = BUILD && +c.minBuild >= BUILD;
+  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Administration', false)}<div class="stack">
+    ${!state.user.verified ? `<div class="banner warn"><span>Ton adresse n'est pas confirmée : connecte-toi avec Google pour que le serveur te reconnaisse comme administrateur.</span></div>` : ''}
+    <section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Utilisateurs</h2><button class="link" data-act="admin-refresh" ${A.loading?'disabled':''}>${A.loading ? 'Actualisation…' : 'Actualiser'}</button></div>
+      ${A.err ? `<div class="banner warn"><span>${esc(A.err)}</span></div>` : !d ? `<div class="kpis admin-kpis"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>` : `
+      <div class="kpis admin-kpis">
+        ${kpi('Comptes', d.users, 'avec un foyer')}
+        ${kpi('Foyers', d.households, `${d.shared} à plusieurs`)}
+        ${kpi('Actifs 7 j', d.week, `${d.today} aujourd'hui`)}
+        ${kpi('Actifs 30 j', d.month, d.users ? Math.round(d.month/d.users*100) + ' % des comptes' : '')}
+        ${kpi('Appareils', d.devices, 'avec rappels')}
+        ${kpi('Lignes', srv ? srv.lines : '—', srv ? 'dernier passage' : 'demain matin')}
+      </div>
+      <p class="muted small" style="margin:10px 4px 0">Mis à jour ${fmtWhen(d.at)}. Seuls des comptages sont affichés : le contenu des budgets reste privé, même pour l'administrateur.</p>`}
+    </section>
+    <section class="card"><div class="card-h"><h2>Rappels quotidiens</h2></div>
+      <div class="setrows">${sw('x-reminders', c.reminders !== false, 'Envoi des rappels', c.reminders === false ? 'Suspendu pour tous les comptes' : 'Chaque matin vers 8 h')}</div>
+      <p class="muted small" style="margin:4px 0 0">${run ? (run.suspended ? `Dernier passage le ${run.date} : envoi suspendu.` : `Dernier passage le ${run.date} : ${run.sent} notification${run.sent>1?'s':''} pour ${run.accounts} compte${run.accounts>1?'s':''}${run.removed ? `, ${run.removed} abonnement${run.removed>1?'s':''} expiré${run.removed>1?'s':''} retiré${run.removed>1?'s':''}` : ''}.`) : 'Le résumé du dernier passage apparaîtra après le prochain envoi.'}${srvAt ? '' : ''}</p></section>
+    <section class="card"><div class="card-h"><h2>Inscriptions</h2></div>
+      <div class="setrows">${sw('x-signups', c.signups !== false, 'Création de nouveaux foyers', c.signups === false ? "Fermée : seuls les codes d'invitation permettent d'entrer" : 'Ouverte à tout nouveau compte')}</div></section>
+    <section class="card"><div class="card-h"><h2>Message à tous</h2>${b.on && b.text ? '<span class="pill good">En ligne</span>' : ''}</div>
+      <textarea class="inp area" id="x-msg" maxlength="280" rows="3" placeholder="Par exemple : nouvelle fonction, maintenance prévue…">${esc(msg)}</textarea>
+      <div class="admin-row">
+        <div class="seg" role="group" aria-label="Ton du message" style="flex:1;max-width:260px"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${tone==='warn'?100:0}%)"></span>
+          <button data-xtone="info" aria-pressed="${tone!=='warn'}">Info</button><button data-xtone="warn" aria-pressed="${tone==='warn'}">Important</button></div>
+        <span class="muted small num" id="x-count">${msg.length}/280</span></div>
+      <div class="btns" style="margin-top:12px"><button class="btn primary press" data-act="banner-publish">${b.on && b.text ? 'Mettre à jour' : 'Publier'}</button>${b.on && b.text ? '<button class="btn gray press" data-act="banner-off">Retirer</button>' : ''}</div>
+      <p class="muted small" style="margin:10px 0 0">Affiché en haut de l'appli pour tous les comptes. Chacun peut le masquer ; un nouveau message réapparaît.</p></section>
+    <section class="card"><div class="card-h"><h2>Mises à jour</h2></div>
+      <div class="setrow" style="padding-top:0"><div class="grow"><div class="t">Version de cet appareil</div><div class="s">${BUILD ? fmtWhen(new Date(BUILD*1000)) : 'Aperçu'}</div></div></div>
+      <button class="btn tint press" data-act="admin-push-build" ${!BUILD || pushed ? 'disabled' : ''}>${pushed ? 'Tous les appareils sont invités à cette version' : 'Proposer cette version à tous les appareils'}</button>
+      <p class="muted small" style="margin:10px 0 0">Les appareils encore sur une version plus ancienne affichent « Nouvelle version disponible » avec un bouton de mise à jour.</p></section>
+    <section class="card"><div class="card-h"><h2>Accès</h2></div><p class="muted small" style="margin:0">Cette console n'apparaît que pour ${esc(ADMIN_EMAIL)}. Le serveur vérifie lui-même l'adresse confirmée ; aucun autre compte ne peut lire ces chiffres ni changer ces réglages.</p></section>
+  </div>`;
+}
 function render(){
   renderNav();
   const main = $('#main');
@@ -1659,8 +1762,9 @@ function render(){
   if(state.mode==='onboard'){ main.innerHTML = viewOnboard(); return; }
   if(state.mode==='loading' || state.mode==='cloud-wait'){ main.innerHTML = loading(); return; }
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
-  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories}[state.route] || viewHome;
+  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories, admin:viewAdmin}[state.route] || viewHome;
   main.innerHTML = v();
+  const bn = appBanners(); if(bn){ const ph = main.querySelector('header.ph'); ph ? ph.insertAdjacentHTML('afterend', bn) : main.insertAdjacentHTML('afterbegin', bn); }
   lastPeriodRender = state.period; lastScopeRender = scopeNow()+whoNow();
 }
 
@@ -1872,7 +1976,8 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 function setPeriod(p){ if(!PERIODS[p] || p===state.period) return; state.period = p; ls.set('bf.period', p); render(); }
 function route(){
   const h = location.hash.replace('#','');
-  state.route = ROUTES.some(r=>r.id===h) || h==='categories' ? h : 'accueil';
+  state.route = ROUTES.some(r=>r.id===h) || h==='categories' || (h==='admin' && isAdmin()) ? h : 'accueil';
+  if(state.route==='admin' && !state.admin) loadAdmin();
   if(state.route==='foyer' && F) refreshPush();
   render(); window.scrollTo({top:0});
 }
@@ -1888,6 +1993,7 @@ document.addEventListener('click', async e => {
   if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
+  if(d.xtone){ state.adminTone = d.xtone; state.adminMsg = $('#x-msg')?.value ?? state.adminMsg; return render(); }
   if(d.edit){ const l = state.lines.find(x=>x.id===d.edit); if(l) openSheet(l); return; }
   if(d.deposit){ const l = state.lines.find(x=>x.id===d.deposit); if(!l) return; const amt = +d.amt;
     if(await Store.save({...l, saved: Math.round(((+l.saved||0)+amt)*100)/100})) toast(`${eur(amt)} mis de côté pour « ${l.label} »`); return; }
@@ -1952,6 +2058,14 @@ document.addEventListener('click', async e => {
     case 'del-ask': sheet.confirm = true; $('#f-del').innerHTML = delHTML(); return;
     case 'del-no': sheet.confirm = false; $('#f-del').innerHTML = delHTML(); return;
     case 'del-yes': { const id = sheet.id, name = sheet.label; closeSheet(); if(await Store.remove(id)) toast(`« ${name} » supprimée`); return; }
+    case 'admin-refresh': loadAdmin(); return;
+    case 'banner-close': ls.set('bf.banner', (state.config.banner||{}).id || ''); return render();
+    case 'app-update': { try { const r = await navigator.serviceWorker?.getRegistration(); await r?.update(); } catch {} location.reload(); return; }
+    case 'banner-publish': { const text = (state.adminMsg ?? (state.config.banner||{}).text ?? '').trim().slice(0,280);
+      if(!text){ toast('Écris un message'); return; }
+      state.adminMsg = text; await Store.saveConfig({ banner: { on:true, text, tone: state.adminTone || (state.config.banner||{}).tone || 'info', id: Date.now().toString(36) } }); toast('Message publié'); return; }
+    case 'banner-off': await Store.saveConfig({ banner: { ...(state.config.banner||{ text:'', tone:'info', id:'0' }), on:false } }); toast('Message retiré'); return;
+    case 'admin-push-build': if(BUILD){ await Store.saveConfig({ minBuild: BUILD }); toast('Mise à jour proposée à tous les appareils'); } return;
     case 'clear-ask': state.confirmClear = true; return render();
     case 'clear-cancel': state.confirmClear = false; return render();
     case 'clear-yes': { state.confirmClear = false; const ex = state.lines.filter(l=>l.example);
@@ -1980,6 +2094,12 @@ document.addEventListener('change', async e => {
     state.busy = false; state.pushState = await Store.pushStatus(); render(); return;
   }
   const key = el.id.slice(2); Store.saveNotify({ [key]: el.checked });
+});
+document.addEventListener('input', e => { if(e.target.id==='x-msg'){ state.adminMsg = e.target.value; const c = $('#x-count'); if(c) c.textContent = `${e.target.value.length}/280`; } });
+document.addEventListener('change', async e => {
+  const el = e.target; if(el.id!=='x-reminders' && el.id!=='x-signups') return;
+  const key = el.id.slice(2); await Store.saveConfig({ [key]: el.checked });
+  toast(key==='reminders' ? (el.checked ? 'Rappels réactivés' : 'Rappels suspendus pour tous') : (el.checked ? 'Création de foyers ouverte' : 'Création de foyers fermée'));
 });
 document.addEventListener('change', e => { const el = e.target; if(el.id && /^(a|o|h)-/.test(el.id)) state.form[el.id] = el.type==='checkbox' ? el.checked : el.value; });
 document.addEventListener('submit', async e => {

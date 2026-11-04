@@ -23,7 +23,7 @@ cat <<'HEAD'
 </head>
 <body>
 HEAD
-cat src/app.html
+sed "s/__BUILD__/$(date +%s)/" src/app.html
 printf '\n</body>\n</html>\n'
 } > index.html
 echo "index.html généré"

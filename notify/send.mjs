@@ -10,6 +10,9 @@
 // Les lignes attribuées à un membre précis ne sont rappelées qu'à ce membre ; les lignes communes, à tous.
 // Une seule notification groupée par compte et par jour, envoyée à tous ses appareils.
 //
+// Réglages de l'administration (config/app) : « reminders: false » suspend les envois.
+// Chaque passage met aussi à jour admin/stats (comptages pour la console d'administration).
+//
 // Options : --dry-run (affiche sans envoyer ni écrire), --force (renvoie même si déjà fait aujourd'hui)
 
 import { Firestore, FieldValue } from '@google-cloud/firestore';
@@ -81,10 +84,26 @@ function compose(today, soon) {
   return { title, body: lines.join('\n') };
 }
 
+/** Comptages pour la console d'administration (aucun contenu de budget). */
+async function writeStats(run) {
+  const count = async q => (await q.count().get()).data().count;
+  const [users, households, lines, devices] = await Promise.all([
+    count(db.collection('users')), count(db.collection('households')), count(db.collectionGroup('lines')), count(db.collectionGroup('devices')),
+  ]);
+  await db.doc('admin/stats').set({ at: FieldValue.serverTimestamp(), users, households, lines, devices, run });
+  console.log(`Statistiques : ${users} compte(s), ${households} foyer(s), ${lines} ligne(s), ${devices} appareil(s).`);
+}
+
 async function main() {
   const tISO = todayISO(), t = parse(tISO), t3 = addDays(t, 3);
   const runRef = db.doc(`server/run-${tISO}`);
   if (!FORCE && !DRY && (await runRef.get()).exists) { console.log(`Déjà envoyé aujourd'hui (${tISO}).`); return; }
+  const config = (await db.doc('config/app').get()).data() || {};
+  if (config.reminders === false && !FORCE) {
+    console.log("Rappels suspendus depuis la console d'administration.");
+    if (!DRY) await writeStats({ date: tISO, suspended: true });
+    return;
+  }
 
   const vapid = (await db.doc('server/vapid').get()).data();
   if (!vapid?.privateKey) throw new Error('Clé VAPID absente (server/vapid).');
@@ -134,7 +153,7 @@ async function main() {
       }
     }
   }
-  if (!DRY) await runRef.set({ at: FieldValue.serverTimestamp(), accounts, sent, removed });
+  if (!DRY) { await runRef.set({ at: FieldValue.serverTimestamp(), accounts, sent, removed }); await writeStats({ date: tISO, accounts, sent, removed }); }
   console.log(`${accounts} compte(s) concerné(s), ${sent} notification(s) envoyée(s), ${removed} abonnement(s) expiré(s) retiré(s).`);
 }
 

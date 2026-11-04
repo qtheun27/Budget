@@ -8,6 +8,8 @@ rules_version = '2';
 // users/{uid}/devices/{id}     appareils abonnés aux notifications (Web Push)
 // server/*                     réservé à l'envoi des rappels (aucun accès depuis l'appli)
 // invites/{code}               code d'invitation à usage unique, expire après 7 jours
+// config/app                   réglages de l'appli (message, inscriptions, rappels, version) : lus par tous, modifiés par l'administrateur
+// admin/*                      statistiques calculées chaque matin par l'envoi des rappels : administrateur seulement
 //
 // Principe : seuls les membres d'un foyer lisent et écrivent ses données.
 // On ne rejoint un foyer qu'en consommant un code d'invitation valide dans la même écriture groupée.
@@ -21,6 +23,12 @@ service cloud.firestore {
     function householdAfter(hid) { return getAfter(/databases/$(database)/documents/households/$(hid)).data; }
     function isMember(hid) { return signedIn() && me() in household(hid).members; }
     function validEmail(e) { return e is string && e.size() <= 254; }
+    // Administrateur : adresse vérifiée (connexion Google), contrôlée par le serveur, pas par l'appli.
+    function isAdmin() { return signedIn() && request.auth.token.email == 'q.theuninck@gmail.com' && request.auth.token.email_verified == true; }
+    function signupsOpen() {
+      let c = /databases/$(database)/documents/config/app;
+      return !exists(c) || get(c).data.get('signups', true) != false;
+    }
 
     // ---------- foyers ----------
     match /households/{hid} {
@@ -35,7 +43,8 @@ service cloud.firestore {
         && request.resource.data.members == [me()]
         && request.resource.data.memberEmails.keys().hasOnly([me()])
         && validEmail(request.resource.data.memberEmails[me()])
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && (signupsOpen() || isAdmin());
 
       // Un membre renomme le foyer.
       allow update: if isMember(hid)
@@ -133,11 +142,14 @@ service cloud.firestore {
     // ---------- comptes ----------
     match /users/{uid} {
       allow read: if signedIn() && me() == uid;
+      // L'administrateur compte les comptes (foyer, réglages, dernier passage ; jamais le contenu des budgets).
+      allow list: if isAdmin();
       // Je ne peux pointer que vers un foyer dont je suis membre (après l'écriture groupée).
       allow create, update: if signedIn() && me() == uid
-        && request.resource.data.keys().hasOnly(['householdId', 'notify'])
+        && request.resource.data.keys().hasOnly(['householdId', 'notify', 'seen'])
         && request.resource.data.householdId is string
         && (!('notify' in request.resource.data) || validNotify(request.resource.data.notify))
+        && (!('seen' in request.resource.data) || (request.resource.data.seen is string && request.resource.data.seen.size() == 10))
         && me() in householdAfter(request.resource.data.householdId).members;
       allow delete: if signedIn() && me() == uid;
 
@@ -161,6 +173,36 @@ service cloud.firestore {
         && (!('before3' in n) || n.before3 is bool)
         && (!('sameDay' in n) || n.sameDay is bool)
         && (!('income' in n) || n.income is bool);
+    }
+
+    // L'administrateur compte les appareils abonnés aux rappels.
+    match /{path=**}/devices/{deviceId} {
+      allow list: if isAdmin();
+    }
+
+    // ---------- réglages de l'appli ----------
+    match /config/{docId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isAdmin() && docId == 'app' && validConfig(request.resource.data);
+      allow delete: if false;
+    }
+    function validConfig(c) {
+      return c.keys().hasOnly(['banner', 'signups', 'reminders', 'minBuild', 'updatedAt', 'updatedBy'])
+        && (!('banner' in c) || (c.banner is map && c.banner.keys().hasOnly(['on', 'text', 'tone', 'id'])
+            && c.banner.on is bool && c.banner.text is string && c.banner.text.size() <= 280
+            && c.banner.tone in ['info', 'warn'] && c.banner.id is string && c.banner.id.size() <= 20))
+        && (!('signups' in c) || c.signups is bool)
+        && (!('reminders' in c) || c.reminders is bool)
+        && (!('minBuild' in c) || c.minBuild is int)
+        && c.updatedAt == request.time
+        && c.updatedBy == request.auth.token.email;
+    }
+
+    // ---------- statistiques (écrites par le serveur uniquement) ----------
+    match /admin/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // ---------- invitations ----------

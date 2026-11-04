@@ -2,7 +2,7 @@
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, collectionGroup, getDocs, getCountFromServer, writeBatch, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 let env;
 const line = { kind: 'expense', label: 'Assurance auto', amount: 890, freq: 'annual', cat: 'assurances', due: '2027-03-01', saved: 0, createdAt: 1, updatedAt: 1 };
@@ -222,4 +222,50 @@ test("la zone serveur (clés d'envoi) est inaccessible", async () => {
 });
 test('supprimer un foyer est refusé', async () => {
   await assertFails(deleteDoc(doc(as('A'), 'households/h1')));
+});
+
+/* ---------- administration ---------- */
+const admin = (verified = true) => env.authenticatedContext('ADM', { email: 'q.theuninck@gmail.com', email_verified: verified }).firestore();
+const cfg = (extra = {}) => ({ signups: true, reminders: true, banner: { on: true, text: 'Bienvenue', tone: 'info', id: 'm1' }, minBuild: 1, updatedAt: serverTimestamp(), updatedBy: 'q.theuninck@gmail.com', ...extra });
+
+test("l'administrateur modifie les réglages, personne d'autre", async () => {
+  await assertSucceeds(setDoc(doc(admin(), 'config/app'), cfg()));
+  await assertFails(setDoc(doc(admin(false), 'config/app'), cfg()));   // adresse non vérifiée
+  await assertFails(setDoc(doc(as('A'), 'config/app'), cfg({ updatedBy: 'a@x.be' })));
+  await assertFails(setDoc(doc(admin(), 'config/autre'), cfg()));
+  await assertFails(setDoc(doc(admin(), 'config/app'), cfg({ hack: 1 })));
+  await assertFails(setDoc(doc(admin(), 'config/app'), cfg({ banner: { on: true, text: 'x'.repeat(300), tone: 'info', id: 'm2' } })));
+});
+test('tout le monde lit les réglages', async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'config/app'), { signups: true }));
+  await assertSucceeds(getDoc(doc(as('A'), 'config/app')));
+  await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'config/app')));
+});
+test("l'administrateur compte les comptes et appareils ; un membre ne peut pas", async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'users/A/devices/d1'), { endpoint: 'https://p', keys: { p256dh: 'x', auth: 'y' }, ua: 't', createdAt: 1 }));
+  await assertSucceeds(getDocs(collection(admin(), 'users')));
+  await assertSucceeds(getCountFromServer(collectionGroup(admin(), 'devices')));
+  await assertFails(getDocs(collection(as('A'), 'users')));
+  await assertFails(getCountFromServer(collectionGroup(as('A'), 'devices')));
+  await assertFails(getDocs(collection(admin(false), 'users')));
+});
+test("l'administrateur ne lit pas le budget des foyers", async () => {
+  await assertFails(getDoc(doc(admin(), 'households/h1')));
+  await assertFails(getDocs(collection(admin(), 'households/h1/lines')));
+});
+test('statistiques : lecture admin, écriture serveur seulement', async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'admin/stats'), { users: 2 }));
+  await assertSucceeds(getDoc(doc(admin(), 'admin/stats')));
+  await assertFails(getDoc(doc(as('A'), 'admin/stats')));
+  await assertFails(setDoc(doc(admin(), 'admin/stats'), { users: 99 }));
+});
+test('inscriptions fermées : plus de nouveau foyer (sauf administrateur)', async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'config/app'), { signups: false }));
+  const mk = (db, uid, email) => setDoc(doc(db, 'households/n' + uid), { name: 'Nouveau', owner: uid, members: [uid], memberEmails: { [uid]: email }, createdAt: serverTimestamp() });
+  await assertFails(mk(as('N'), 'N', 'n@x.be'));
+  await assertSucceeds(mk(admin(), 'ADM', 'q.theuninck@gmail.com'));
+});
+test('dernier passage enregistré sur le compte', async () => {
+  await assertSucceeds(updateDoc(doc(as('A'), 'users/A'), { seen: '2026-11-04' }));
+  await assertFails(updateDoc(doc(as('A'), 'users/A'), { seen: 20261104 }));
 });
