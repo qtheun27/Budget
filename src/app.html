@@ -225,6 +225,42 @@ button.row:hover{background:var(--fill2)}
 .admin-kpis .skel{height:92px}
 .kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
 .inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.nbadge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;font-style:normal;display:inline-grid;place-items:center;flex:none}
+.save-card .nbadge{margin:0 4px 0 0}
+.m-only.dotted{position:relative}
+.m-only.dotted::after{content:"";position:absolute;top:0;right:0;width:11px;height:11px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
+.faq-i{border-top:.5px solid var(--sep)}
+.faq-i:first-child{border-top:0}
+.faq-i summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;justify-content:space-between;padding:14px 16px;font-weight:550;font-size:15px}
+.faq-i summary::-webkit-details-marker{display:none}
+.faq-i summary .chev{transition:transform .2s;flex:none}
+.faq-i[open] summary .chev{transform:rotate(90deg)}
+.faq-a{padding:0 16px 14px;color:var(--fg2);font-size:14.5px;line-height:1.5}
+.faq-a b{color:var(--fg);font-weight:600}
+.chat{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px}
+.chat-day{align-self:center;font-size:12px;font-weight:600;color:var(--fg3);margin:8px 0 2px;text-transform:capitalize}
+.bubble-row{display:flex;flex-direction:column;align-items:flex-start;max-width:82%}
+.bubble-row.me{align-self:flex-end;align-items:flex-end}
+.bubble{padding:9px 13px;border-radius:18px;border-bottom-left-radius:6px;background:var(--fill);font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.bubble-row.me .bubble{background:var(--accent);color:#fff;border-bottom-left-radius:18px;border-bottom-right-radius:6px}
+.bmeta{display:block;font-size:11.5px;opacity:.75;margin-top:4px}
+.btime{font-size:11px;color:var(--fg3);margin:2px 6px 0}
+.composer{border-top:.5px solid var(--sep);padding-top:12px}
+.topics{margin-bottom:10px}
+.topics .chip{height:30px;font-size:13px;padding:0 11px}
+.topics .chip svg{width:14px;height:14px}
+.composer-row{display:flex;align-items:flex-end;gap:8px}
+.composer-row textarea{flex:1;min-width:0;resize:none;border:0;outline:none;border-radius:20px;background:var(--fill2);color:var(--fg);padding:10px 14px;font:inherit;font-size:16px;line-height:1.35;max-height:160px}
+.composer-row textarea:focus{box-shadow:0 0 0 2px var(--accent)}
+.send{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
+.send svg{width:18px;height:18px}
+.send:disabled{opacity:.5}
+.ttag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:650;background:var(--fill);color:var(--fg2);vertical-align:1px;margin-left:6px}
+.row.unread .t{font-weight:700}
+.inbox-r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.udot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.done-box summary{list-style:none;cursor:pointer}
+.done-box summary::-webkit-details-marker{display:none}
 .admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
 
 .empty{text-align:center;padding:40px 20px}
@@ -772,7 +808,7 @@ const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
   scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
-  who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null,
+  who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null, support: null, supportList: [], chat: { uid:null, msgs:[], draft:'', topic:'' },
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
 };
@@ -826,7 +862,11 @@ const localImportable = () => (ls.get('bf.lines', null) || []).filter(l => !l.ex
 let pendingRender = false;
 const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#main') && (a.tagName==='TEXTAREA' || (a.tagName==='INPUT' && /^(text|email|password|search|tel|url|number)$/.test(a.type)))); };
 /** Rendu déclenché par des données reçues : différé pendant la saisie pour ne pas voler le focus. */
-function renderData(){ if(typing()){ pendingRender = true; return; } render(); }
+function renderData(){
+  const a = document.activeElement;
+  // Dans une conversation, les nouveaux messages s'affichent même pendant la saisie : on garde le texte et le curseur.
+  if(a && a.id==='chat-input'){ const v = a.value, st = a.selectionStart, en = a.selectionEnd; render(); const n = $('#chat-input'); if(n){ n.value = v; n.focus({ preventScroll:true }); try { n.setSelectionRange(st, en); } catch {} autoGrow(n); } return; }
+  if(typing()){ pendingRender = true; return; } render(); }
 document.addEventListener('focusout', () => setTimeout(() => { if(pendingRender && !typing()){ pendingRender = false; render(); } }, 0));
 
 const Store = {
@@ -866,7 +906,49 @@ const Store = {
     F = { app, auth, db, A, S };
     A.onAuthStateChanged(auth, u => this.onUser(u));
   },
-  stop(){ [...this.unsubs, ...this.hUnsubs].forEach(u => { try { u(); } catch {} }); this.unsubs = []; this.hUnsubs = []; },
+  stop(){ [...this.unsubs, ...this.hUnsubs].forEach(u => { try { u(); } catch {} }); this.unsubs = []; this.hUnsubs = []; this.closeChat(); state.support = null; state.supportList = []; },
+  /* --- centre d'aide --- */
+  watchSupport(u){
+    const { S } = F, ts = { serverTimestamps:'estimate' };
+    this.unsubs.push(S.onSnapshot(S.doc(F.db, 'support', u.uid), snap => { state.support = snap.exists() ? snap.data(ts) : null; this.markRead(); renderNav(); renderData(); }, () => {}));
+    if((u.email||'') === ADMIN_EMAIL && u.emailVerified)
+      this.unsubs.push(S.onSnapshot(S.query(S.collection(F.db, 'support'), S.orderBy('lastAt', 'desc'), S.limit(200)), snap => {
+        state.supportList = snap.docs.map(d => ({ uid:d.id, ...d.data(ts) })); this.markRead(); renderNav(); renderData();
+      }, err => console.warn('support', err)));
+  },
+  /** Ouvre la conversation d'un compte (le sien, ou n'importe lequel pour l'administrateur). */
+  openChat(uid){
+    if(state.chat.uid === uid && this.chatUnsub) return;
+    this.closeChat(); const { S } = F;
+    state.chat = { ...state.chat, uid, msgs:[], loaded:false };
+    this.chatUnsub = S.onSnapshot(S.query(S.collection(F.db, 'support', uid, 'messages'), S.orderBy('at')), snap => {
+      const n = state.chat.msgs.length;
+      state.chat.msgs = snap.docs.map(d => ({ id:d.id, ...d.data({ serverTimestamps:'estimate' }) })); state.chat.loaded = true;
+      this.markRead(); renderData(); if(state.chat.msgs.length > n) scrollChat();
+    }, err => { console.warn('chat', err); state.chat.loaded = true; renderData(); });
+  },
+  closeChat(){ if(this.chatUnsub){ try { this.chatUnsub(); } catch {} } this.chatUnsub = null; if(state.chat) state.chat.uid = null; },
+  /** Marque la conversation affichée comme lue (une seule écriture par nouveau message). */
+  markRead(){
+    const { uid } = state.chat || {}; if(!uid || !F) return;
+    const { S } = F;
+    if(state.route==='aide' && uid===state.user?.uid && supportUnreadUser()){ state.support.userReadAt = { toMillis: () => Date.now() };
+      S.updateDoc(S.doc(F.db, 'support', uid), { userReadAt: S.serverTimestamp() }).catch(() => {}); }
+    if(state.route==='support' && isAdmin()){ const t = state.supportList.find(x => x.uid===uid);
+      if(t && adminUnread(t)){ t.adminReadAt = { toMillis: () => Date.now() }; S.updateDoc(S.doc(F.db, 'support', uid), { adminReadAt: S.serverTimestamp() }).catch(() => {}); } }
+  },
+  async sendSupport(uid, text, topic){
+    const { S } = F, asAdmin = uid !== state.user.uid, b = S.writeBatch(F.db), ref = S.doc(F.db, 'support', uid);
+    const t = { lastAt: S.serverTimestamp(), lastFrom: asAdmin ? 'admin' : 'user', lastText: text.slice(0, 140) };
+    if(asAdmin) t.adminReadAt = S.serverTimestamp();
+    else { Object.assign(t, { email: state.user.email.slice(0, 254), name: (profileOf(state.user.uid).name || '').slice(0, 40), topic, status:'open', userReadAt: S.serverTimestamp() });
+      if(!state.support) t.createdAt = S.serverTimestamp(); }
+    const m = { from: t.lastFrom, text, at: S.serverTimestamp() };
+    if(!asAdmin && topic==='bug') m.meta = { ua: navigator.userAgent.slice(0, 300), build: BUILD, app: isStandalone() };
+    b.set(ref, t, { merge:true }); b.set(S.doc(S.collection(F.db, 'support', uid, 'messages')), m);
+    return this.write(b.commit());
+  },
+  setSupportStatus(uid, status){ const { S } = F; return this.write(S.updateDoc(S.doc(F.db, 'support', uid), { status })); },
   onUser(u){
     this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false; catDocs = {}; rebuildCats();
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
@@ -874,6 +956,7 @@ const Store = {
     const { S } = F;
     // Réglages de l'appli publiés depuis la console d'administration (message, inscriptions, version).
     this.unsubs.push(S.onSnapshot(S.doc(F.db, 'config', 'app'), snap => { state.config = snap.exists() ? snap.data() : {}; renderData(); }, () => {}));
+    this.watchSupport(u);
     this.unsubs.push(S.onSnapshot(S.doc(F.db, 'users', u.uid), { includeMetadataChanges:true }, snap => {
       // Attendre la confirmation du serveur : un foyer tout juste créé ou rejoint n'est lisible qu'après.
       if(snap.metadata.hasPendingWrites) return;
@@ -1143,7 +1226,8 @@ let lastPeriodRender = state.period, lastScopeRender = 'all';
 
 function renderNav(){
   const cur = state.route;
-  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur || (r.id==='foyer' && (cur==='categories' || cur==='admin'))?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`).join('');
+  $('#nav').innerHTML = ROUTES.map(r=>`<a href="#${r.id}" ${r.id===cur || (r.id==='foyer' && ['categories','admin','aide','support'].includes(cur))?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span>${r.id==='foyer' && unreadCount() ? `<em class="nbadge">${unreadCount()}</em>` : ''}</a>`).join('');
+  const mb = document.querySelector('.ph .m-only'); if(mb){ mb.classList.toggle('dotted', unreadCount() > 0); }
   const t = ROUTES.slice(0,4).map(r=>`<a class="tab press" href="#${r.id}" ${r.id===cur?'aria-current="page"':''}>${ic(r.icon)}<span>${r.label}</span></a>`);
   t.splice(2,0,`<button class="tab-add press" data-act="new" aria-label="Nouvelle ligne">${ic('plus',2.4)}</button>`);
   $('#tabbar').innerHTML = t.join('');
@@ -1208,7 +1292,7 @@ function avatar(id, cls=''){
 function header(eyebrow, title, withPeriod=true){
   const d = isDesk();
   return `<header class="ph"><div class="ph-t"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div>
-    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="m-only press" href="#foyer" aria-label="Foyer et compte" style="text-decoration:none">${state.user ? avatar(state.user.uid) : `<span class="icon-btn">${ic('users')}</span>`}</a>` : ''}</div></header>
+    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="m-only press${unreadCount() ? ' dotted' : ''}" href="#foyer" aria-label="Foyer et compte" style="text-decoration:none">${state.user ? avatar(state.user.uid) : `<span class="icon-btn">${ic('users')}</span>`}</a>` : ''}</div></header>
     ${withPeriod && !d ? periodBar() : ''}`;
 }
 function exampleBanner(){
@@ -1522,7 +1606,7 @@ function remindersCard(){
     </div>
     <p class="muted small" style="margin:4px 0 0">Envoyés chaque matin vers 8 h, en une seule notification. Les réglages valent pour tous tes appareils ; active les rappels sur chacun d'eux.</p></section>`;
 }
-async function refreshPush(){ const st = await Store.pushStatus(); if(st !== state.pushState){ state.pushState = st; if(state.route==='foyer') render(); } }
+async function refreshPush(){ const st = await Store.pushStatus(); if(st !== state.pushState){ state.pushState = st; if(state.route==='foyer' || state.route==='aide') render(); } }
 function catsEntry(){
   const created = Object.values(CATS).filter(c => c.custom).length, hidden = Object.values(CATS).filter(c => c.hidden).length;
   return `<a class="card save-card press" href="#categories" style="text-decoration:none;color:inherit">
@@ -1665,6 +1749,7 @@ function viewFoyer(){
       : `<p class="muted" style="margin:0 0 14px">Crée un code et envoie-le. Ton ou ta partenaire crée son compte dans l'appli, choisit « Rejoindre un foyer » et le saisit. Vous voyez ensuite le même budget, en direct.</p>
         <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
     </section>
+    ${helpEntry()}
     ${catsEntry()}
     ${isAdmin() ? adminEntry() : ''}
     ${nameForm}
@@ -1673,6 +1758,98 @@ function viewFoyer(){
       <div class="row" style="padding:0 0 14px">${avatar(me, 'sm')}<span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
       <button class="btn danger press" data-act="signout">Se déconnecter</button></section>
   </div>`;
+}
+
+/* ================= centre d'aide ================= */
+const tsMs = t => t && t.toMillis ? t.toMillis() : 0;
+const supportUnreadUser = () => { const t = state.support; return !!(t && t.lastFrom==='admin' && tsMs(t.userReadAt) < tsMs(t.lastAt)); };
+const adminUnread = t => t.lastFrom==='user' && tsMs(t.adminReadAt) < tsMs(t.lastAt);
+const adminUnreadCount = () => isAdmin() ? state.supportList.filter(adminUnread).length : 0;
+const unreadCount = () => (supportUnreadUser() ? 1 : 0) + adminUnreadCount();
+const TOPICS = { question:{ label:'Question', icon:'doc' }, bug:{ label:'Bug', icon:'bolt' }, idea:{ label:'Idée', icon:'star' } };
+const FAQ = [
+  ['Comment partager le budget avec mon ou ma partenaire ?', "Dans <b>Foyer</b>, touche « Créer un code d'invitation » et envoie-le. Ton ou ta partenaire crée son compte, choisit « Rejoindre un foyer » et saisit le code. Vous voyez ensuite le même budget, en direct. Le code sert une seule fois et expire après 7 jours."],
+  ['Comment recevoir les rappels sur iPhone ?', "Ouvre l'appli dans Safari, touche Partager puis <b>« Sur l'écran d'accueil »</b>. Ouvre-la ensuite depuis son icône, va dans <b>Foyer → Rappels de paiement</b> et active « Sur cet appareil ». Chaque appareil s'active séparément."],
+  ['Une dépense trimestrielle ou annuelle, comment est-elle comptée ?', "Encode-la à sa vraie fréquence et à son vrai montant. L'appli la lisse automatiquement en budget mensuel ou hebdomadaire, et l'onglet <b>Provisions</b> t'indique combien mettre de côté chaque mois pour être prêt à l'échéance."],
+  ['Un prélèvement qui tombe plusieurs fois par mois ?', "Choisis la fréquence <b>« Plusieurs fois / mois »</b> et ajoute chaque prélèvement avec son jour et son montant (par exemple une carte essence le 7 et le 22, ou plusieurs crédits). Chaque prélèvement peut avoir sa propre date de fin."],
+  ['Le montant change à chaque fois (carte essence, électricité) ?', "Active <b>« Montant variable »</b> et indique une estimation moyenne. Le montant est alors affiché avec « ≈ » partout, rappels compris."],
+  ['Un crédit, un leasing ou une location qui se termine ?', "Indique la <b>fin des paiements</b> dans la ligne. L'appli arrête de la compter après cette date, affiche le nombre de paiements restants et, sur l'accueil, ce que tu vas libérer chaque mois."],
+  ['Privé, Pro ou Mixte : à quoi ça sert ?', "Pour une activité indépendante : marque les revenus et frais professionnels en <b>Pro</b>, ou en <b>Mixte</b> avec un pourcentage (une voiture utilisée à 40 % pour l'activité). Le filtre Privé / Pro sépare ensuite les deux budgets."],
+  ['Commun ou personnel ?', "Dans chaque ligne, <b>« Pour qui »</b> indique si elle est commune ou propre à un membre. Le filtre en haut des pages montre tout le foyer, le commun ou une personne. Une ligne personnelle n'est rappelée qu'à son membre."],
+  ['Mes données sont-elles en sécurité ?', "Elles sont hébergées en Belgique (Google Cloud, europe-west1) et seuls les membres de ton foyer peuvent les lire, contrôle fait par le serveur. Même l'administrateur de l'appli ne voit pas le contenu des budgets."],
+  ["L'appli ne montre pas la dernière version ?", "Ferme-la complètement puis rouvre-la. Si un bandeau « Nouvelle version disponible » apparaît, touche « Mettre à jour »."],
+];
+function helpEntry(){
+  const u = supportUnreadUser();
+  return `<a class="card save-card press" href="#aide" style="text-decoration:none;color:inherit">
+    <span class="save-ic">${ic('doc')}</span><span class="grow"><strong>Aide et contact</strong><br><span class="muted small">${u ? 'Nouvelle réponse à ton message' : 'Questions fréquentes, une question, un bug ou une idée'}</span></span>
+    ${u ? '<em class="nbadge">1</em>' : ''}<span class="chev">${ic('chev')}</span></a>`;
+}
+function scrollChat(){ requestAnimationFrame(() => { const last = document.querySelector('.chat .bubble-row:last-child'); if(last) last.scrollIntoView({ block:'end', behavior:'smooth' }); }); }
+const chatTime = d => d.toLocaleTimeString('fr-BE', { hour:'2-digit', minute:'2-digit' });
+const chatDay = d => { const t = today0(), x = new Date(d); x.setHours(0,0,0,0); const n = Math.round((t - x)/86400000);
+  return n===0 ? "Aujourd'hui" : n===1 ? 'Hier' : d.toLocaleDateString('fr-BE', { weekday:'long', day:'numeric', month:'long', ...(d.getFullYear()!==t.getFullYear() ? { year:'numeric' } : {}) }); };
+/** Fil de messages ; `mine` = côté qui s'affiche à droite ('user' ou 'admin'). */
+function chatHTML(msgs, mine, thread){
+  let day = '', out = '';
+  const otherRead = tsMs(mine==='user' ? thread?.adminReadAt : thread?.userReadAt);
+  const lastMine = [...msgs].reverse().find(m => m.from===mine);
+  msgs.forEach(m => {
+    const d = m.at && m.at.toDate ? m.at.toDate() : new Date(), k = d.toDateString();
+    if(k !== day){ day = k; out += `<div class="chat-day">${chatDay(d)}</div>`; }
+    const me = m.from===mine;
+    const meta = m.meta ? `<span class="bmeta">${esc(deviceName(m.meta.ua))}${m.meta.app ? ' · appli installée' : ''}${m.meta.build ? ' · version du ' + new Date(m.meta.build*1000).toLocaleDateString('fr-BE') : ''}</span>` : '';
+    out += `<div class="bubble-row${me ? ' me' : ''}"><div class="bubble">${esc(m.text).replace(/\n/g,'<br>')}${meta}</div>
+      <span class="btime">${chatTime(d)}${me && m===lastMine && otherRead >= tsMs(m.at) ? ' · Lu' : ''}</span></div>`;
+  });
+  return `<div class="chat">${out}</div>`;
+}
+const deviceName = ua => /iPhone/.test(ua||'') ? 'iPhone' : /iPad/.test(ua||'') ? 'iPad' : /Android/.test(ua||'') ? 'Android' : /Mac/.test(ua||'') ? 'Mac' : /Windows/.test(ua||'') ? 'Windows' : 'Navigateur';
+function composerHTML(placeholder, withTopics){
+  const c = state.chat, topic = c.topic || state.support?.topic || 'question';
+  return `<div class="composer">
+    ${withTopics ? `<div class="chips topics">${Object.entries(TOPICS).map(([k,t]) => `<button class="chip press" data-ctopic="${k}" aria-pressed="${topic===k}">${ic(t.icon,2.1)}${t.label}</button>`).join('')}</div>` : ''}
+    <div class="composer-row"><textarea id="chat-input" rows="1" maxlength="2000" placeholder="${placeholder}" aria-label="Message">${esc(c.draft||'')}</textarea>
+      <button class="send press" data-act="chat-send" aria-label="Envoyer" ${state.busy ? 'disabled' : ''}>${ic('up',2.6)}</button></div>
+    ${withTopics && topic==='bug' ? '<p class="muted small" style="margin:6px 4px 0">Le type d\'appareil et la version de l\'appli sont joints pour aider à comprendre le bug. Rien de ton budget.</p>' : ''}
+  </div>`;
+}
+function viewHelp(){
+  const c = state.chat, t = state.support, fb = !!(F && state.user);
+  if(fb && !state.pushState){ state.pushState = 'checking'; setTimeout(refreshPush, 0); }
+  const pushOff = fb && state.pushState && state.pushState !== 'on';
+  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Aide', false)}<div class="stack">
+    <section><div class="group-h" style="padding-top:0"><span>Questions fréquentes</span></div>
+      <div class="list faq">${FAQ.map(([q,a]) => `<details class="faq-i"><summary>${esc(q)}<span class="chev">${ic('chev')}</span></summary><div class="faq-a">${a}</div></details>`).join('')}</div></section>
+    ${fb ? `<section class="card chat-card"><div class="card-h"><h2>Écrire au support</h2>${t && t.status==='resolved' ? '<span class="pill good">Résolu</span>' : t ? '<span class="pill info">En cours</span>' : ''}</div>
+      ${!c.loaded ? '<div class="skel" style="height:80px"></div>' : c.msgs.length ? chatHTML(c.msgs, 'user', t)
+        : `<p class="muted" style="margin:0 0 4px">Une question, un bug ou une idée ? Écris ici : je te réponds dans cette conversation.</p>`}
+      ${composerHTML('Ton message…', true)}
+      ${pushOff ? `<p class="muted small" style="margin:10px 2px 0">Pour être prévenu de la réponse, active les notifications sur cet appareil dans <a class="link" href="#foyer">Foyer → Rappels de paiement</a>.</p>` : ''}
+    </section>` : ''}
+  </div>`;
+}
+function inboxSection(){
+  const L = state.supportList, open = L.filter(t => t.status !== 'resolved'), done = L.filter(t => t.status === 'resolved');
+  const row = t => { const d = t.lastAt && t.lastAt.toDate ? t.lastAt.toDate() : null, un = adminUnread(t);
+    return `<a class="row press${un ? ' unread' : ''}" href="#support/${esc(t.uid)}" style="text-decoration:none;color:inherit"><span class="avatar sm">${esc((t.name || t.email || '?')[0])}</span>
+      <span style="min-width:0"><div class="t">${esc(t.name || t.email || 'Compte')}<span class="ttag">${TOPICS[t.topic]?.label || 'Message'}</span></div>
+      <div class="s">${t.lastFrom==='admin' ? 'Toi : ' : ''}${esc(t.lastText || '')}</div></span>
+      <span class="inbox-r"><span class="muted small">${d ? (chatDay(d)==="Aujourd'hui" ? chatTime(d) : d.toLocaleDateString('fr-BE',{day:'numeric',month:'short'})) : ''}</span>${un ? '<i class="udot"></i>' : ''}</span></a>`; };
+  return `<section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Messages</h2>${adminUnreadCount() ? `<span class="pill info">${adminUnreadCount()} non lu${adminUnreadCount()>1?'s':''}</span>` : ''}</div>
+    ${!L.length ? `<div class="card"><p class="muted" style="margin:0">Aucun message pour l'instant. Les questions envoyées depuis « Aide et contact » arrivent ici, avec une notification sur tes appareils.</p></div>`
+      : `<div class="list">${open.length ? open.map(row).join('') : '<div class="row"><span></span><span class="muted">Tout est traité.</span><span></span></div>'}</div>
+      ${done.length ? `<details class="done-box"><summary class="group-h"><span>Résolus</span><span>${done.length}</span></summary><div class="list" style="opacity:.75">${done.map(row).join('')}</div></details>` : ''}`}
+  </section>`;
+}
+function viewSupport(){
+  const c = state.chat, t = state.supportList.find(x => x.uid === c.uid) || {};
+  return `${header('<a class="link" href="#admin">‹ Administration</a>', esc(t.name || t.email || 'Conversation'), false)}<div class="stack">
+    <section class="card chat-card"><div class="card-h"><div style="min-width:0"><div class="muted small">${esc(t.email || '')}${t.topic ? ' · ' + (TOPICS[t.topic]?.label || '') : ''}</div></div>
+      <button class="btn ${t.status==='resolved' ? 'gray' : 'tint'} press" data-act="chat-status" style="height:32px;font-size:13px">${t.status==='resolved' ? 'Rouvrir' : 'Marquer résolu'}</button></div>
+      ${!c.loaded ? '<div class="skel" style="height:80px"></div>' : chatHTML(c.msgs, 'admin', t)}
+      ${composerHTML('Ta réponse…', false)}
+    </section></div>`;
 }
 
 /* ================= bandeaux globaux & console d'administration ================= */
@@ -1685,7 +1862,7 @@ function appBanners(){
 }
 function adminEntry(){
   return `<a class="card save-card press" href="#admin" style="text-decoration:none;color:inherit">
-    <span class="save-ic">${ic('shield')}</span><span class="grow"><strong>Console d'administration</strong><br><span class="muted small">Utilisateurs, message à tous, inscriptions, rappels et mises à jour</span></span>
+    <span class="save-ic">${ic('shield')}</span><span class="grow"><strong>Console d'administration</strong><br><span class="muted small">Messages, utilisateurs, message à tous, inscriptions, rappels et mises à jour</span></span>${adminUnreadCount() ? `<em class="nbadge">${adminUnreadCount()}</em>` : ''}
     <span class="chev">${ic('chev')}</span></a>`;
 }
 async function loadAdmin(){
@@ -1703,6 +1880,7 @@ function viewAdmin(){
   const sw = (id, on, t, sub) => `<div class="setrow"><div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label></div>`;
   const pushed = BUILD && +c.minBuild >= BUILD;
   return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Administration', false)}<div class="stack">
+    ${inboxSection()}
     ${!state.user.verified ? `<div class="banner warn"><span>Ton adresse n'est pas confirmée : connecte-toi avec Google pour que le serveur te reconnaisse comme administrateur.</span></div>` : ''}
     <section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Utilisateurs</h2><button class="link" data-act="admin-refresh" ${A.loading?'disabled':''}>${A.loading ? 'Actualisation…' : 'Actualiser'}</button></div>
       ${A.err ? `<div class="banner warn"><span>${esc(A.err)}</span></div>` : !d ? `<div class="kpis admin-kpis"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>` : `
@@ -1744,7 +1922,7 @@ function render(){
   if(state.mode==='onboard'){ main.innerHTML = viewOnboard(); return; }
   if(state.mode==='loading' || state.mode==='cloud-wait'){ main.innerHTML = loading(); return; }
   if(state.mode==='error'){ main.innerHTML = `${header('Erreur', 'Budget', false)}<div class="card empty"><h2>Le budget partagé est indisponible</h2><p>L'accès a peut-être changé. Recharge la page ou demande à la personne qui l'a partagé de vérifier ton accès.</p></div>`; return; }
-  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories, admin:viewAdmin}[state.route] || viewHome;
+  const v = {accueil:viewHome, budget:viewBudget, echeancier:viewTimeline, provisions:viewProvisions, foyer:viewFoyer, categories:viewCategories, admin:viewAdmin, aide:viewHelp, support:viewSupport}[state.route] || viewHome;
   main.innerHTML = v();
   const bn = appBanners(); if(bn){ const ph = main.querySelector('header.ph'); ph ? ph.insertAdjacentHTML('afterend', bn) : main.insertAdjacentHTML('afterbegin', bn); }
   lastPeriodRender = state.period; lastScopeRender = scopeNow()+whoNow();
@@ -1958,7 +2136,10 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 function setPeriod(p){ if(!PERIODS[p] || p===state.period) return; state.period = p; ls.set('bf.period', p); render(); }
 function route(){
   const h = location.hash.replace('#','');
-  state.route = ROUTES.some(r=>r.id===h) || h==='categories' || (h==='admin' && isAdmin()) ? h : 'accueil';
+  const sup = /^support\/([\w-]{6,128})$/.exec(h);
+  state.route = sup && isAdmin() ? 'support' : ROUTES.some(r=>r.id===h) || h==='categories' || h==='aide' || (h==='admin' && isAdmin()) ? h : 'accueil';
+  if(F && state.user && (state.route==='aide' || state.route==='support')) Store.openChat(state.route==='aide' ? state.user.uid : sup[1]); else if(F) Store.closeChat();
+  state.chat.draft = '';
   if(state.route==='admin' && !state.admin) loadAdmin();
   if(state.route==='foyer' && F) refreshPush();
   render(); window.scrollTo({top:0});
@@ -1975,6 +2156,7 @@ document.addEventListener('click', async e => {
   if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
+  if(d.ctopic){ state.chat.topic = d.ctopic; state.chat.draft = $('#chat-input')?.value ?? state.chat.draft; return render(); }
   if(d.xtone){ state.adminTone = d.xtone; state.adminMsg = $('#x-msg')?.value ?? state.adminMsg; return render(); }
   if(d.edit){ const l = state.lines.find(x=>x.id===d.edit); if(l) openSheet(l); return; }
   if(d.deposit){ const l = state.lines.find(x=>x.id===d.deposit); if(!l) return; const amt = +d.amt;
@@ -2041,6 +2223,9 @@ document.addEventListener('click', async e => {
     case 'del-no': sheet.confirm = false; $('#f-del').innerHTML = delHTML(); return;
     case 'del-yes': { const id = sheet.id, name = sheet.label; closeSheet(); if(await Store.remove(id)) toast(`« ${name} » supprimée`); return; }
     case 'admin-refresh': loadAdmin(); return;
+    case 'chat-send': return sendChat();
+    case 'chat-status': { const uid = state.chat.uid, t = state.supportList.find(x => x.uid===uid); if(!t) return;
+      await Store.setSupportStatus(uid, t.status==='resolved' ? 'open' : 'resolved'); toast(t.status==='resolved' ? 'Conversation rouverte' : 'Marquée comme résolue'); return; }
     case 'banner-close': ls.set('bf.banner', (state.config.banner||{}).id || ''); return render();
     case 'app-update': { try { const r = await navigator.serviceWorker?.getRegistration(); await r?.update(); } catch {} location.reload(); return; }
     case 'banner-publish': { const text = (state.adminMsg ?? (state.config.banner||{}).text ?? '').trim().slice(0,280);
@@ -2077,6 +2262,17 @@ document.addEventListener('change', async e => {
   }
   const key = el.id.slice(2); Store.saveNotify({ [key]: el.checked });
 });
+async function sendChat(){
+  const inp = $('#chat-input'), text = (inp ? inp.value : state.chat.draft || '').trim();
+  if(!text || !state.chat.uid || state.busy) return;
+  const topic = state.chat.topic || state.support?.topic || 'question';
+  state.chat.draft = ''; if(inp){ inp.value = ''; autoGrow(inp); }
+  if(await Store.sendSupport(state.chat.uid, text.slice(0, 2000), topic)){ render(); scrollChat(); setTimeout(() => $('#chat-input')?.focus({ preventScroll:true }), 50); }
+  else { state.chat.draft = text; render(); }
+}
+const autoGrow = el => { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 160) + 'px'; };
+document.addEventListener('input', e => { if(e.target.id==='chat-input'){ state.chat.draft = e.target.value; autoGrow(e.target); } });
+document.addEventListener('keydown', e => { if(e.target.id==='chat-input' && e.key==='Enter' && !e.shiftKey && isDesk()){ e.preventDefault(); sendChat(); } });
 document.addEventListener('input', e => { if(e.target.id==='x-msg'){ state.adminMsg = e.target.value; const c = $('#x-count'); if(c) c.textContent = `${e.target.value.length}/280`; } });
 document.addEventListener('change', async e => {
   const el = e.target; if(el.id!=='x-reminders' && el.id!=='x-signups') return;

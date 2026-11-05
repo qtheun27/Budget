@@ -9,6 +9,7 @@ rules_version = '2';
 // server/*                     réservé à l'envoi des rappels (aucun accès depuis l'appli)
 // invites/{code}               code d'invitation à usage unique, expire après 7 jours
 // config/app                   réglages de l'appli (message, inscriptions, rappels, version) : lus par tous, modifiés par l'administrateur
+// support/{uid}                conversation du centre d'aide d'un compte (+ messages) : le compte et l'administrateur
 // admin/*                      statistiques calculées chaque matin par l'envoi des rappels : administrateur seulement
 //
 // Principe : seuls les membres d'un foyer lisent et écrivent ses données.
@@ -197,6 +198,54 @@ service cloud.firestore {
         && (!('minBuild' in c) || c.minBuild is int)
         && c.updatedAt == request.time
         && c.updatedBy == request.auth.token.email;
+    }
+
+    // ---------- centre d'aide ----------
+    // Une conversation par compte. Chaque message s'écrit avec la mise à jour du fil, dans la même écriture groupée.
+    match /support/{uid} {
+      allow get: if signedIn() && (me() == uid || isAdmin());
+      allow list: if isAdmin();
+      allow delete: if false;
+
+      // Le compte ouvre ou alimente sa conversation.
+      allow create: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'topic', 'status', 'lastAt', 'lastFrom', 'lastText', 'userReadAt', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && threadFields(request.resource.data) && request.resource.data.lastFrom == 'user';
+      allow update: if signedIn() && me() == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'name', 'topic', 'status', 'lastAt', 'lastFrom', 'lastText', 'userReadAt'])
+        && threadFields(request.resource.data)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastAt', 'lastFrom', 'lastText']) || (request.resource.data.lastFrom == 'user' && request.resource.data.lastAt == request.time))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) || request.resource.data.status == 'open');
+      // L'administrateur répond, lit et classe.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastAt', 'lastFrom', 'lastText', 'adminReadAt'])
+        && threadFields(request.resource.data)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastAt', 'lastFrom', 'lastText']) || (request.resource.data.lastFrom == 'admin' && request.resource.data.lastAt == request.time));
+
+      match /messages/{mid} {
+        allow read: if signedIn() && (me() == uid || isAdmin());
+        allow create: if signedIn()
+          && ((me() == uid && request.resource.data.from == 'user') || (isAdmin() && request.resource.data.from == 'admin'))
+          && request.resource.data.keys().hasOnly(['from', 'text', 'at', 'meta'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000
+          && request.resource.data.at == request.time
+          && (!('meta' in request.resource.data) || (request.resource.data.meta is map && request.resource.data.meta.keys().hasOnly(['ua', 'build', 'app'])
+              && request.resource.data.meta.ua is string && request.resource.data.meta.ua.size() <= 300))
+          && getAfter(/databases/$(database)/documents/support/$(uid)).data.lastAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+    function threadFields(t) {
+      return (!('email' in t) || validEmail(t.email))
+        && (!('name' in t) || (t.name is string && t.name.size() <= 40))
+        && (!('topic' in t) || t.topic in ['question', 'bug', 'idea'])
+        && (!('status' in t) || t.status in ['open', 'resolved'])
+        && (!('lastText' in t) || (t.lastText is string && t.lastText.size() <= 140))
+        && (!('lastFrom' in t) || t.lastFrom in ['user', 'admin'])
+        && (!('lastAt' in t) || t.lastAt is timestamp)
+        && (!('userReadAt' in t) || t.userReadAt is timestamp)
+        && (!('adminReadAt' in t) || t.adminReadAt is timestamp);
     }
 
     // ---------- statistiques (écrites par le serveur uniquement) ----------

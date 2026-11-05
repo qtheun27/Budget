@@ -5,6 +5,9 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": [
+    { "source": "functions", "codebase": "default", "runtime": "nodejs20", "ignore": ["node_modules", ".git", "*.log"] }
+  ],
   "emulators": {
     "firestore": { "port": 8080 },
     "ui": { "enabled": false },

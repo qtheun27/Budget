@@ -2,7 +2,7 @@
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, collectionGroup, getDocs, getCountFromServer, writeBatch, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { query, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, collectionGroup, getDocs, getCountFromServer, writeBatch, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 let env;
 const line = { kind: 'expense', label: 'Assurance auto', amount: 890, freq: 'annual', cat: 'assurances', due: '2027-03-01', saved: 0, createdAt: 1, updatedAt: 1 };
@@ -268,4 +268,42 @@ test('inscriptions fermées : plus de nouveau foyer (sauf administrateur)', asyn
 test('dernier passage enregistré sur le compte', async () => {
   await assertSucceeds(updateDoc(doc(as('A'), 'users/A'), { seen: '2026-11-04' }));
   await assertFails(updateDoc(doc(as('A'), 'users/A'), { seen: 20261104 }));
+});
+
+/* ---------- centre d'aide ---------- */
+const send = (db, uid, from, text, first = false) => {
+  const b = writeBatch(db);
+  const t = { lastAt: serverTimestamp(), lastFrom: from, lastText: text.slice(0, 140) };
+  if (from === 'user') Object.assign(t, { email: uid.toLowerCase() + '@x.be', topic: 'question', status: 'open' });
+  if (first) t.createdAt = serverTimestamp();
+  b.set(doc(db, 'support', uid), t, { merge: true });
+  b.set(doc(collection(db, 'support', uid, 'messages')), { from, text, at: serverTimestamp() });
+  return b.commit();
+};
+test("un compte écrit au centre d'aide, l'administrateur répond", async () => {
+  await assertSucceeds(send(as('A'), 'A', 'user', 'Bonjour, comment partager ?', true));
+  await assertSucceeds(send(as('A'), 'A', 'user', 'Encore une question'));
+  await assertSucceeds(send(admin(), 'A', 'admin', 'Depuis Foyer → Inviter.'));
+  await assertSucceeds(getDocs(query(collection(as('A'), 'support/A/messages'), orderBy('at'))));
+  await assertSucceeds(getDocs(collection(admin(), 'support')));
+  await assertSucceeds(updateDoc(doc(admin(), 'support/A'), { status: 'resolved', adminReadAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(doc(as('A'), 'support/A'), { userReadAt: serverTimestamp() }));
+});
+test("personne d'autre ne lit ni n'écrit dans la conversation d'un compte", async () => {
+  await assertSucceeds(send(as('A'), 'A', 'user', 'Message privé', true));
+  await assertFails(getDoc(doc(as('Q'), 'support/A')));
+  await assertFails(getDocs(collection(as('Q'), 'support/A/messages')));
+  await assertFails(getDocs(collection(as('Q'), 'support')));
+  await assertFails(send(as('Q'), 'A', 'user', 'Usurpation'));
+  await assertFails(send(as('A'), 'A', 'admin', 'Je me fais passer pour le support'));
+  await assertFails(send(admin(false), 'A', 'admin', 'Adresse non vérifiée'));
+});
+test("messages : texte borné, non modifiables, fil obligatoire", async () => {
+  await assertFails(send(as('A'), 'A', 'user', 'x'.repeat(2001), true));
+  await assertFails(setDoc(doc(as('A'), 'support/A/messages/m1'), { from: 'user', text: 'seul', at: serverTimestamp() }));   // sans mise à jour du fil
+  await assertSucceeds(send(as('A'), 'A', 'user', 'ok', true));
+  const m = (await getDocs(collection(as('A'), 'support/A/messages'))).docs[0];
+  await assertFails(updateDoc(m.ref, { text: 'modifié' }));
+  await assertFails(deleteDoc(m.ref));
+  await assertFails(updateDoc(doc(as('A'), 'support/A'), { status: 'resolved' }));   // seul l'administrateur classe
 });
