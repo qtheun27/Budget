@@ -246,6 +246,9 @@ button.row:hover{background:var(--fill2)}
 .nbadge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;font-style:normal;display:inline-grid;place-items:center;flex:none}
 .save-card .nbadge{margin:0 4px 0 0}
 .m-only.dotted{position:relative}
+.ph .m-only{position:relative;display:block}
+.gear-b{position:absolute;right:-4px;bottom:-4px;width:19px;height:19px;border-radius:50%;background:var(--card);color:var(--fg2);display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.gear-b svg{width:12px;height:12px}
 .m-only.dotted::after{content:"";position:absolute;top:0;right:0;width:11px;height:11px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
 .faq-i{border-top:.5px solid var(--sep)}
 .faq-i:first-child{border-top:0}
@@ -573,6 +576,7 @@ const P = {
   gift:'<rect x="4" y="11" width="16" height="9.5" rx="1.5"/><path d="M3 7.5h18V11H3zM12 7.5v13M12 7.5C10 3.5 6.5 4.5 7.5 7.5M12 7.5c2-4 5.5-3 4.5 0"/>',
   coin:'<circle cx="12" cy="12" r="8"/><path d="M15 9.2a3.5 3.5 0 1 0 0 5.6M8 11h5M8 13h5"/>',
   trash:'<path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l.8 12.2a1.5 1.5 0 0 0 1.5 1.3h6.4a1.5 1.5 0 0 0 1.5-1.3L17.5 7"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   users:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.3"/>',
   copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
   store:'<path d="M4.5 9.5 6 4.5h12l1.5 5"/><path d="M4.5 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/><path d="M5.5 11.5v8h13v-8M10 19.5V15h4v4.5"/>',
@@ -669,7 +673,7 @@ const ROUTES = [
   {id:'budget',label:'Budget',icon:'list'},
   {id:'echeancier',label:'Échéancier',icon:'cal'},
   {id:'provisions',label:'Provisions',icon:'jar'},
-  {id:'foyer',label:'Foyer',icon:'users'}
+  {id:'foyer',label:'Réglages',icon:'gear'}
 ];
 
 const isProvision = l => l.kind==='expense' && (l.freq==='once' || (FREQ[l.freq]?.months||0) >= 2);
@@ -837,7 +841,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1793863553' || 0;
+const BUILD = +'1793866589' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -1255,7 +1259,7 @@ function renderNav(){
     : state.mode==='local' ? ['local','Sur cet appareil'] : ['loading','Connexion…'];
   const el = $('#sync-side'); el.dataset.s = s[0]; el.querySelector('span').textContent = s[1];
   $('#share-hint').innerHTML = fb
-    ? (n > 1 ? `<b>Foyer partagé.</b> Vos modifications se synchronisent en direct.` : `<b>Seul pour l'instant.</b> Invite ton ou ta partenaire depuis <a class="link" href="#foyer">Foyer</a>.`)
+    ? (n > 1 ? `<b>Foyer partagé.</b> Vos modifications se synchronisent en direct.` : `<b>Seul pour l'instant.</b> Invite ton ou ta partenaire depuis <a class="link" href="#foyer">Réglages</a>.`)
     : state.mode==='cloud'
     ? '<b>Budget à deux.</b> Partage cette page avec ton ou ta partenaire en accès <b>Contributeur</b> : vos modifications se synchronisent en direct.'
     : '<b>Données locales.</b> Elles restent sur cet appareil.';
@@ -1310,7 +1314,7 @@ function avatar(id, cls=''){
 function header(eyebrow, title, withPeriod=true){
   const d = isDesk();
   return `<header class="ph"><div class="ph-t"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div>
-    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="m-only press${unreadCount() ? ' dotted' : ''}" href="#foyer" aria-label="Foyer et compte" style="text-decoration:none">${state.user ? avatar(state.user.uid) : `<span class="icon-btn">${ic('users')}</span>`}</a>` : ''}</div></header>
+    <div class="ph-tools">${withPeriod && d ? periodBar() : ''}${state.route!=='foyer' ? `<a class="m-only press${unreadCount() ? ' dotted' : ''}" href="#foyer" aria-label="Réglages" style="text-decoration:none">${state.user ? avatar(state.user.uid) : `<span class="icon-btn">${ic('users')}</span>`}<span class="gear-b" aria-hidden="true">${ic('gear',2.2)}</span></a>` : ''}</div></header>
     ${withPeriod && !d ? periodBar() : ''}`;
 }
 function exampleBanner(){
@@ -1640,7 +1644,7 @@ function viewCategories(){
       <span class="cat-acts">${hidden ? '' : `<button class="mini press" data-cmove="${id}" data-dir="-1" ${i===0?'disabled':''} aria-label="Monter">${ic('up')}</button><button class="mini press" data-cmove="${id}" data-dir="1" ${i===arr.length-1?'disabled':''} aria-label="Descendre">${ic('down')}</button>`}
       <button class="mini press" data-chide="${id}" aria-label="${hidden ? 'Afficher' : 'Masquer'} ${esc(c.label)}">${ic(hidden ? 'eye' : 'eyeoff')}</button>
       <button class="mini press" data-cedit="${id}" aria-label="Modifier ${esc(c.label)}">${ic('pencil')}</button></span></div>`; };
-  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Catégories', false)}<div class="stack">
+  return `${header('<a class="link" href="#foyer">‹ Réglages</a>', 'Catégories', false)}<div class="stack">
     <div class="seg" role="group" aria-label="Type"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${k==='expense'?0:100}%)"></span>
       <button data-catkind="expense" aria-pressed="${k==='expense'}">Dépenses</button><button data-catkind="income" aria-pressed="${k==='income'}">Revenus</button></div>
     <p class="muted small" style="margin:0">L'ordre choisi ici est celui de la saisie. Pour proposer une catégorie, l'appli regarde d'abord comment le foyer a déjà classé des lignes semblables, puis tes mots-clés.</p>
@@ -1736,7 +1740,7 @@ function viewFoyer(){
     <form class="inline" id="name-form" novalidate><input class="inp" id="h-name" maxlength="40" value="${esc(f['h-name'] ?? (m.name||''))}" aria-label="Nom du foyer" style="box-shadow:none;background:var(--fill2)">
     <button class="btn tint press" type="submit">Enregistrer</button></form></section>`;
   if(!fb){
-    return `${header('Réglages', 'Foyer', false)}<div class="stack">${catsEntry()}${nameForm}
+    return `${header(esc(state.meta.name||'Budget du Foyer'), 'Réglages', false)}<div class="stack">${catsEntry()}${nameForm}
       <section class="card"><div class="card-h"><h2>${state.mode==='cloud' ? 'Budget partagé' : 'Données sur cet appareil'}</h2></div>
       <p class="muted" style="margin:0">${state.mode==='cloud'
         ? "Cet aperçu se partage depuis le menu Partager de la page : ajoute ton ou ta partenaire en accès Contributeur. Pour l'appli installable avec comptes et code d'invitation, ouvre la version en ligne."
@@ -1745,7 +1749,7 @@ function viewFoyer(){
   }
   const members = (m.members||[]).map(id => ({ id, email: (m.memberEmails||{})[id] || '', name: profileOf(id).name || '' }));
   const inv = state.invite, me = state.user.uid, myP = profileOf(me), gPhoto = Store.googlePhoto();
-  return `${header('Réglages et partage', esc(m.name||'Foyer'), false)}<div class="stack">
+  return `${header(esc(m.name||'Mon foyer'), 'Réglages', false)}<div class="stack">
     <section class="card"><div class="card-h"><h2>Ton profil</h2></div>
       <div class="profile">${avatar(me, 'xl')}
         <div class="grow">
@@ -1785,9 +1789,11 @@ const adminUnread = t => t.lastFrom==='user' && tsMs(t.adminReadAt) < tsMs(t.las
 const adminUnreadCount = () => isAdmin() ? state.supportList.filter(adminUnread).length : 0;
 const unreadCount = () => (supportUnreadUser() ? 1 : 0) + adminUnreadCount();
 const TOPICS = { question:{ label:'Question', icon:'doc' }, bug:{ label:'Bug', icon:'bolt' }, idea:{ label:'Idée', icon:'star' } };
+/** Où se trouvent les réglages : dans le menu sur ordinateur, derrière la photo de profil sur téléphone. */
+const settingsWhere = () => isDesk() ? '<b>Réglages</b>' : '<b>Réglages</b> (touche ta photo en haut à droite)';
 const FAQ = [
-  ['Comment partager le budget avec mon ou ma partenaire ?', "Dans <b>Foyer</b>, touche « Créer un code d'invitation » et envoie-le. Ton ou ta partenaire crée son compte, choisit « Rejoindre un foyer » et saisit le code. Vous voyez ensuite le même budget, en direct. Le code sert une seule fois et expire après 7 jours."],
-  ['Comment recevoir les rappels sur iPhone ?', "Ouvre l'appli dans Safari, touche Partager puis <b>« Sur l'écran d'accueil »</b>. Ouvre-la ensuite depuis son icône, va dans <b>Foyer → Rappels de paiement</b> et active « Sur cet appareil ». Chaque appareil s'active séparément."],
+  ['Comment partager le budget avec mon ou ma partenaire ?', "Dans {R}, touche « Créer un code d'invitation » et envoie-le. Ton ou ta partenaire crée son compte, choisit « Rejoindre un foyer » et saisit le code. Vous voyez ensuite le même budget, en direct. Le code sert une seule fois et expire après 7 jours."],
+  ['Comment recevoir les rappels sur iPhone ?', "Ouvre l'appli dans Safari, touche Partager puis <b>« Sur l'écran d'accueil »</b>. Ouvre-la ensuite depuis son icône, va dans {R} → <b>Rappels de paiement</b> et active « Sur cet appareil ». Chaque appareil s'active séparément."],
   ['Une dépense trimestrielle ou annuelle, comment est-elle comptée ?', "Encode-la à sa vraie fréquence et à son vrai montant. L'appli la lisse automatiquement en budget mensuel ou hebdomadaire, et l'onglet <b>Provisions</b> t'indique combien mettre de côté chaque mois pour être prêt à l'échéance."],
   ['Un prélèvement qui tombe plusieurs fois par mois ?', "Choisis la fréquence <b>« Plusieurs fois / mois »</b> et ajoute chaque prélèvement avec son jour et son montant (par exemple une carte essence le 7 et le 22, ou plusieurs crédits). Chaque prélèvement peut avoir sa propre date de fin."],
   ['Le montant change à chaque fois (carte essence, électricité) ?', "Active <b>« Montant variable »</b> et indique une estimation moyenne. Le montant est alors affiché avec « ≈ » partout, rappels compris."],
@@ -1836,14 +1842,14 @@ function viewHelp(){
   const c = state.chat, t = state.support, fb = !!(F && state.user);
   if(fb && !state.pushState){ state.pushState = 'checking'; setTimeout(refreshPush, 0); }
   const pushOff = fb && state.pushState && state.pushState !== 'on';
-  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Aide', false)}<div class="stack">
+  return `${header('<a class="link" href="#foyer">‹ Réglages</a>', 'Aide', false)}<div class="stack">
     <section><div class="group-h" style="padding-top:0"><span>Questions fréquentes</span></div>
-      <div class="list faq">${FAQ.map(([q,a]) => `<details class="faq-i"><summary>${esc(q)}<span class="chev">${ic('chev')}</span></summary><div class="faq-a">${a}</div></details>`).join('')}</div></section>
+      <div class="list faq">${FAQ.map(([q,a]) => `<details class="faq-i"><summary>${esc(q)}<span class="chev">${ic('chev')}</span></summary><div class="faq-a">${a.replace(/\{R\}/g, settingsWhere())}</div></details>`).join('')}</div></section>
     ${fb ? `<section class="card chat-card"><div class="card-h"><h2>Écrire au support</h2>${t && t.status==='resolved' ? '<span class="pill good">Résolu</span>' : t ? '<span class="pill info">En cours</span>' : ''}</div>
       ${!c.loaded ? '<div class="skel" style="height:80px"></div>' : c.msgs.length ? chatHTML(c.msgs, 'user', t)
         : `<p class="muted" style="margin:0 0 4px">Une question, un bug ou une idée ? Écris ici : je te réponds dans cette conversation.</p>`}
       ${composerHTML('Ton message…', true)}
-      ${pushOff ? `<p class="muted small" style="margin:10px 2px 0">Pour être prévenu de la réponse, active les notifications sur cet appareil dans <a class="link" href="#foyer">Foyer → Rappels de paiement</a>.</p>` : ''}
+      ${pushOff ? `<p class="muted small" style="margin:10px 2px 0">Pour être prévenu de la réponse, active les notifications sur cet appareil dans <a class="link" href="#foyer">Réglages</a>${isDesk() ? '' : ' (ta photo en haut à droite)'} → Rappels de paiement.</p>` : ''}
     </section>` : ''}
   </div>`;
 }
@@ -1897,7 +1903,7 @@ function viewAdmin(){
   const srv = d && d.server, run = srv && srv.run, srvAt = srv && srv.at && srv.at.toDate ? srv.at.toDate() : null;
   const sw = (id, on, t, sub) => `<div class="setrow"><div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label></div>`;
   const pushed = BUILD && +c.minBuild >= BUILD;
-  return `${header('<a class="link" href="#foyer">‹ Foyer</a>', 'Administration', false)}<div class="stack">
+  return `${header('<a class="link" href="#foyer">‹ Réglages</a>', 'Administration', false)}<div class="stack">
     ${inboxSection()}
     ${!state.user.verified ? `<div class="banner warn"><span>Ton adresse n'est pas confirmée : connecte-toi avec Google pour que le serveur te reconnaisse comme administrateur.</span></div>` : ''}
     <section><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Utilisateurs</h2><button class="link" data-act="admin-refresh" ${A.loading?'disabled':''}>${A.loading ? 'Actualisation…' : 'Actualiser'}</button></div>
