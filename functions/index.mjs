@@ -8,7 +8,6 @@
 
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
@@ -19,7 +18,9 @@ initializeApp();
 const db = getFirestore();
 setGlobalOptions({ region: 'europe-west1', maxInstances: 2, memory: '256MiB' });
 
-const ADMIN_EMAIL = 'q.theuninck@gmail.com';
+// Compte administrateur (q.theuninck@gmail.com) : identifiant public, pas un secret.
+// Le connaître évite de donner aux fonctions un accès à la liste des comptes.
+const ADMIN_UID = '67zWQidP9gaAoOT8FD3GHiLigRT2';
 const TOPICS = { question: 'Question', bug: 'Bug', idea: 'Idée' };
 const log = (...a) => logger.info(a.join(' '));
 
@@ -33,12 +34,10 @@ export const messageSupport = onDocumentCreated({ document: 'support/{uid}/messa
   await setupPush(db, webpush);
   const text = String(m.text || '').replace(/\s+/g, ' ').slice(0, 180);
   if (m.from === 'user') {
-    let admin;
-    try { admin = await getAuth().getUserByEmail(ADMIN_EMAIL); } catch { log('Compte administrateur introuvable'); return; }
-    if (admin.uid === uid) return;   // l'administrateur s'écrit à lui-même : rien à notifier
+    if (ADMIN_UID === uid) return;   // l'administrateur s'écrit à lui-même : rien à notifier
     const who = thread.name || thread.email || 'Un utilisateur';
     log(`Message de ${uid.slice(0, 6)}… → administrateur`);
-    await pushToUser({ db, webpush, uid: admin.uid, log, payload: {
+    await pushToUser({ db, webpush, uid: ADMIN_UID, log, payload: {
       title: `${who} · ${TOPICS[thread.topic] || 'Message'}`, body: text, url: `${APP_URL}#support/${uid}`, tag: `support-${uid}` } });
   } else if (m.from === 'admin') {
     log(`Réponse → ${uid.slice(0, 6)}…`);
