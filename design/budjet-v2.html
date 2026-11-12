@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bud Jet · Logo et assistant</title>
+<style>
+:root{--bg:#F2F2F7;--card:#fff;--fg:#0B0B0F;--fg2:#6B6B76;--accent:#0A66FF}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1C1C1E;--fg:#F5F5F7;--fg2:#A1A1AA}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;padding:28px 16px 48px}
+h1{font-size:30px;letter-spacing:-.02em;margin:0 0 6px}
+h2.sec{font-size:22px;margin:30px 0 4px}
+.lead{color:var(--fg2);margin:0 0 18px;max-width:64ch}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));max-width:1100px}
+.card{background:var(--card);border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase}
+h3{font-size:19px;margin:4px 0 14px}
+.icons{display:flex;gap:14px;align-items:flex-end}
+.icons svg{border-radius:23%;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+p.d{color:var(--fg2);font-size:14.5px;margin:14px 0 0}
+.stage{display:grid;place-items:center;height:210px;border-radius:18px;background:linear-gradient(160deg,#EAF1FF,#F7F3FF)}
+@media (prefers-color-scheme:dark){.stage{background:linear-gradient(160deg,#101a2e,#1b1430)}}
+.bubble{margin-top:12px;background:var(--bg);border-radius:16px;padding:10px 13px;font-weight:600;font-size:15px}
+.bubble small{display:block;font-weight:400;color:var(--fg2);font-size:13px;margin-top:2px}
+</style>
+</head>
+<body>
+<h1>Bud Jet : logo et assistant</h1>
+<p class="lead">Deux éléments distincts : <b>le logo</b> (icône sobre, initiales B et J, façon Apple / Revolut) et <b>l'assistant</b> (un personnage attachant qui accueille, guide et répond).</p>
+
+<h2 class="sec">1. Le logo : monogramme B + J</h2>
+<p class="lead">Le jambage du <b>B</b> descend et se recourbe pour former le <b>J</b> : une seule lettre qui se lit « BJ ». Trois mises en scène, de la plus sobre à la plus « chevalière ».</p>
+<div class="grid">
+  <section class="card"><span class="tag">Logo 1</span><h3>Nuit et accent bleu</h3>
+    <div class="icons">
+      <svg width="104" height="104" viewBox="0 0 120 120"><defs><linearGradient id="l1bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#15151C"/><stop offset="1" stop-color="#2A2A36"/></linearGradient><linearGradient id="l1j" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A8BFF"/><stop offset="1" stop-color="#7B5CFF"/></linearGradient></defs>
+        <rect width="120" height="120" fill="url(#l1bg)"/>
+        <g fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M50 26H62C73 26 77 33 77 39.5C77 46 72 52 62 52H50" stroke="#fff"/>
+          <path d="M50 52H65C77 52 82 59 82 66.5C82 74 76 81 65 81H50" stroke="#fff"/>
+          <path d="M50 24V84C50 97 38 101 30 93" stroke="url(#l1j)"/>
+        </g></svg>
+      <svg width="58" height="58" viewBox="0 0 120 120"><rect width="120" height="120" fill="#1E1E28"/><g fill="none" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><path d="M50 26H62C73 26 77 33 77 39.5C77 46 72 52 62 52H50M50 52H65C77 52 82 59 82 66.5C82 74 76 81 65 81H50" stroke="#fff"/><path d="M50 24V84C50 97 38 101 30 93" stroke="#4C86FF"/></g></svg>
+    </div>
+    <p class="d">Le J en dégradé bleu-violet ressort sur fond nuit : on voit les deux lettres. Élégant, très « Apple ».</p></section>
+
+  <section class="card"><span class="tag">Logo 2</span><h3>Bleu Bud Jet</h3>
+    <div class="icons">
+      <svg width="104" height="104" viewBox="0 0 120 120"><defs><linearGradient id="l2bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F7BFF"/><stop offset="1" stop-color="#5B3DF5"/></linearGradient></defs>
+        <rect width="120" height="120" fill="url(#l2bg)"/>
+        <g fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M50 26H62C73 26 77 33 77 39.5C77 46 72 52 62 52H50M50 52H65C77 52 82 59 82 66.5C82 74 76 81 65 81H50"/>
+          <path d="M50 24V84C50 97 38 101 30 93"/>
+        </g>
+        <path d="M86 92h12M80 100h12" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/></svg>
+      <svg width="58" height="58" viewBox="0 0 120 120"><rect width="120" height="120" fill="#3D63FA"/><g fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><path d="M50 26H62C73 26 77 33 77 39.5C77 46 72 52 62 52H50M50 52H65C77 52 82 59 82 66.5C82 74 76 81 65 81H50M50 24V84C50 97 38 101 30 93"/></g></svg>
+    </div>
+    <p class="d">Tout en blanc sur le bleu de l'appli, avec deux traits de vitesse (le « jet »). Le plus lisible sur l'écran d'accueil.</p></section>
+
+  <section class="card"><span class="tag">Logo 3</span><h3>La chevalière</h3>
+    <div class="icons">
+      <svg width="104" height="104" viewBox="0 0 120 120"><defs><linearGradient id="l3bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#121218"/><stop offset="1" stop-color="#262632"/></linearGradient><linearGradient id="l3g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6D27A"/><stop offset=".5" stop-color="#D9A441"/><stop offset="1" stop-color="#F3CF74"/></linearGradient></defs>
+        <rect width="120" height="120" fill="url(#l3bg)"/>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="url(#l3g)" stroke-width="3"/>
+        <g fill="none" stroke="url(#l3g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" transform="translate(4 0)">
+          <path d="M50 30H61C70 30 74 36 74 41.5C74 47 70 52 61 52H50M50 52H63C73 52 77 58 77 64.5C77 71 72 77 63 77H50"/>
+          <path d="M50 28V80C50 91 40 94 33 88"/>
+        </g></svg>
+      <svg width="58" height="58" viewBox="0 0 120 120"><rect width="120" height="120" fill="#1A1A22"/><circle cx="60" cy="60" r="44" fill="none" stroke="#E2B455" stroke-width="5"/><g fill="none" stroke="#E2B455" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" transform="translate(4 0)"><path d="M50 30H61C70 30 74 36 74 41.5C74 47 70 52 61 52H50M50 52H63C73 52 77 58 77 64.5C77 71 72 77 63 77H50M50 28V80C50 91 40 94 33 88"/></g></svg>
+    </div>
+    <p class="d">Or sur noir, dans un anneau, comme une chevalière gravée. Le clin d'œil « agent secret » le plus chic. Un peu moins lisible en très petit.</p></section>
+</div>
+
+<h2 class="sec">2. L'assistant</h2>
+<p class="lead">Un personnage en volume, expressif, qui apparaît dans les moments clés : accueil, budget belge, conseils, réponses du centre d'aide. Trois pistes originales sur le thème de l'agent secret.</p>
+<div class="grid">
+
+  <!-- Assistant 1 : la tirelire agent -->
+  <section class="card"><span class="tag">Assistant 1</span><h3>La tirelire agent</h3>
+    <div class="stage"><svg width="190" height="190" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="pg" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#7FB2FF"/><stop offset=".55" stop-color="#3D7BFF"/><stop offset="1" stop-color="#2148C9"/></radialGradient>
+        <radialGradient id="ps" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+        <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a46"/><stop offset="1" stop-color="#0b0b10"/></linearGradient>
+        <linearGradient id="coin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#E9A21A"/></linearGradient>
+      </defs>
+      <ellipse cx="100" cy="182" rx="62" ry="9" fill="url(#ps)"/>
+      <rect x="58" y="146" width="16" height="30" rx="8" fill="#2148C9"/><rect x="126" y="146" width="16" height="30" rx="8" fill="#2148C9"/>
+      <g transform="rotate(-8 100 50)"><circle cx="100" cy="32" r="13" fill="url(#coin)"/><path d="M96 27h7M95 32h8M96 37h7" stroke="#B9770C" stroke-width="2" stroke-linecap="round"/></g>
+      <ellipse cx="100" cy="110" rx="70" ry="58" fill="url(#pg)"/>
+      <path d="M44 72l-8-24 26 14z" fill="#2E62E6"/><path d="M156 72l8-24-26 14z" fill="#2E62E6"/>
+      <rect x="86" y="54" width="28" height="6" rx="3" fill="#1A3BA8"/>
+      <ellipse cx="72" cy="80" rx="22" ry="12" fill="#fff" opacity=".18"/>
+      <ellipse cx="100" cy="124" rx="26" ry="19" fill="#5C93FF"/><ellipse cx="91" cy="124" rx="5" ry="7" fill="#1A3BA8"/><ellipse cx="109" cy="124" rx="5" ry="7" fill="#1A3BA8"/>
+      <rect x="54" y="88" width="40" height="22" rx="10" fill="url(#gl)"/><rect x="106" y="88" width="40" height="22" rx="10" fill="url(#gl)"/><path d="M94 96h12" stroke="#111" stroke-width="5"/>
+      <path d="M60 93l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/><path d="M112 93l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <path d="M86 146c8 5 20 5 28 0" stroke="#1A3BA8" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M80 160l20 7-20 7zM120 160l-20 7 20 7z" fill="#111"/><circle cx="100" cy="167" r="5" fill="#111"/>
+      <path d="M168 106c10-4 14 6 6 10" stroke="#2E62E6" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </svg></div>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>Mission du jour : mettre ton budget à l'abri des mauvaises surprises.</small></div>
+    <p class="d">L'épargne en personnage : une tirelire bleue avec lunettes noires et nœud papillon, une pièce qui tombe dans la fente. Parle à tout le monde, très attachante.</p></section>
+
+  <!-- Assistant 2 : la pièce agent -->
+  <section class="card"><span class="tag">Assistant 2</span><h3>L'agent pièce</h3>
+    <div class="stage"><svg width="190" height="190" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="cg" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#FFF1B8"/><stop offset=".45" stop-color="#F7C443"/><stop offset="1" stop-color="#C9850E"/></radialGradient>
+        <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E7A928"/><stop offset="1" stop-color="#9C6206"/></linearGradient>
+        <radialGradient id="cs" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+        <linearGradient id="gl2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a46"/><stop offset="1" stop-color="#0b0b10"/></linearGradient>
+      </defs>
+      <ellipse cx="100" cy="184" rx="50" ry="8" fill="url(#cs)"/>
+      <path d="M84 150v26M116 150v26" stroke="#2B2B36" stroke-width="9" stroke-linecap="round"/><path d="M76 178h14M110 178h14" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M38 104c-14 6-16 22-6 28" stroke="#2B2B36" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <circle cx="104" cy="92" r="66" fill="url(#rim)"/><circle cx="100" cy="90" r="62" fill="url(#cg)"/>
+      <circle cx="100" cy="90" r="52" fill="none" stroke="#D99A1C" stroke-width="2.5" opacity=".7"/>
+      <ellipse cx="78" cy="58" rx="24" ry="12" fill="#fff" opacity=".35" transform="rotate(-20 78 58)"/>
+      <rect x="58" y="74" width="38" height="22" rx="10" fill="url(#gl2)"/><rect x="104" y="74" width="38" height="22" rx="10" fill="url(#gl2)"/><path d="M96 82h8" stroke="#111" stroke-width="5"/>
+      <path d="M64 79l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/><path d="M110 79l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <path d="M82 116c10 7 26 7 36 0" stroke="#8A4B00" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <path d="M78 150l22 8-22 8zM122 150l-22 8 22 8z" fill="#111"/><circle cx="100" cy="158" r="5.5" fill="#111"/>
+      <g transform="translate(150 96) rotate(18)"><rect x="-12" y="-22" width="26" height="44" rx="6" fill="#16161D"/><rect x="-9" y="-17" width="20" height="32" rx="3" fill="#3D7BFF"/><path d="M-5 4l5-6 4 3 5-8" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M162 108c-8-4-16 0-18 6" stroke="#2B2B36" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </svg></div>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>J'ai analysé ton dossier : 3 échéances à prévoir ce trimestre.</small></div>
+    <p class="d">Une pièce d'or en volume, smoking implicite, qui tient son téléphone avec ta courbe de budget. Plus « agent en mission », très expressive.</p></section>
+
+  <!-- Assistant 3 : le dossier secret -->
+  <section class="card"><span class="tag">Assistant 3</span><h3>Le dossier « Top Budget »</h3>
+    <div class="stage"><svg width="190" height="190" viewBox="0 0 200 200">
+      <defs>
+        <linearGradient id="fd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5D9A6"/><stop offset="1" stop-color="#D9AE66"/></linearGradient>
+        <linearGradient id="fb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2BC79"/><stop offset="1" stop-color="#B98A43"/></linearGradient>
+        <radialGradient id="fs" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+        <linearGradient id="gl3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a46"/><stop offset="1" stop-color="#0b0b10"/></linearGradient>
+      </defs>
+      <ellipse cx="100" cy="184" rx="60" ry="8" fill="url(#fs)"/>
+      <path d="M78 156v22M122 156v22" stroke="#7A5524" stroke-width="9" stroke-linecap="round"/>
+      <path d="M38 52h44l10 10h70v96H38z" fill="url(#fb)"/>
+      <rect x="46" y="46" width="108" height="22" rx="3" fill="#fff" transform="rotate(-4 100 57)"/>
+      <path d="M34 66h132l-6 94H40z" fill="url(#fd)"/>
+      <ellipse cx="70" cy="80" rx="26" ry="8" fill="#fff" opacity=".3"/>
+      <rect x="52" y="92" width="40" height="22" rx="10" fill="url(#gl3)"/><rect x="108" y="92" width="40" height="22" rx="10" fill="url(#gl3)"/><path d="M92 100h16" stroke="#111" stroke-width="5"/>
+      <path d="M58 97l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/><path d="M114 97l14-2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <path d="M86 128c8 5 20 5 28 0" stroke="#7A5524" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <g transform="rotate(-10 128 146)"><rect x="92" y="136" width="74" height="20" rx="4" fill="none" stroke="#D63B3B" stroke-width="3"/><text x="129" y="151" text-anchor="middle" font-size="10" font-weight="800" fill="#D63B3B" font-family="Arial, sans-serif" letter-spacing=".5">TOP BUDGET</text></g>
+      <path d="M36 110c-12 4-14 18-4 22" stroke="#B98A43" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M164 110c12 4 14 18 4 22" stroke="#B98A43" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </svg></div>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>Ton dossier est classé « Top Budget ». Accès réservé au foyer.</small></div>
+    <p class="d">Un dossier confidentiel avec tampon « Top Budget » : l'univers espion à fond, et un rappel que tes données restent privées. Le plus original, un peu plus « BD ».</p></section>
+</div>
+<p class="lead" style="margin-top:22px">Ces dessins sont des esquisses vectorielles. Pour un rendu 3D comme l'exemple que tu m'as montré, on peut faire réaliser le personnage choisi en images (générateur d'images ou illustrateur), avec ses différentes expressions, puis je l'intègre dans l'appli.</p>
+</body>
+</html>
