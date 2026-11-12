@@ -264,6 +264,13 @@ button.row:hover{background:var(--fill2)}
 .goal-add svg{width:14px;height:14px}
 .goal.done .goal-t b{color:var(--green)}
 .goal-ic{padding:0 6px}
+.recap-strip{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.recap-strip .chip{height:32px;font-size:13px}
+.recap-strip .chip svg{width:15px;height:15px}
+.recap-kpis{width:100%}
+.recap-kpis .kpi{box-shadow:none;background:var(--card)}
+.recap-list{margin:0;padding:0 0 0 18px;text-align:left;color:var(--fg2);display:flex;flex-direction:column;gap:6px;width:100%;font-size:14.5px}
+.recap-list b{color:var(--fg)}
 .pot-rows{display:flex;flex-direction:column;gap:10px}
 .pot-row{display:flex;align-items:center;gap:12px}
 .pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -1597,6 +1604,7 @@ function viewTimeline(){
   return `${header('Rentrées et sorties mois par mois', 'Échéancier', false)}
   ${filtersBlock()}
   ${forecastCard()}
+  ${state.lines.length ? recapStrip() : ''}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid">
     <section class="card">
@@ -1980,6 +1988,79 @@ function forecastCard(){
   </section>`;
 }
 
+/* ================= bilans du mois et de l'année ================= */
+/** Rentrées et sorties prévues entre deux dates (vue et filtres actuels), avec le détail par ligne. */
+function periodFlows(start, end){
+  const items = [];
+  state.lines.forEach(l => {
+    const f = shareOf(l); if(!f) return;
+    if(l.freq === 'multi'){ multiOccurrences(l, start, end).forEach(o => items.push({ l, d:o.date, amt:o.amt * f, raw:o.amt, pi: partIdx(l, o.part) })); return; }
+    const occ = occurrences(l, start, end);
+    if(occ === null){ if(!isActive(l)) return; const months = (end - start) / (30.44 * 86400000); items.push({ l, d:null, amt: yearlyRaw(l) / 12 * months * f }); return; }
+    occ.forEach(d => items.push({ l, d, amt:(+l.amount || 0) * f, raw:+l.amount || 0, pi:-1 }));
+  });
+  const out = sum(items.filter(i => i.l.kind === 'expense'), i => i.amt), inc = sum(items.filter(i => i.l.kind === 'income'), i => i.amt);
+  const save = sum(items.filter(i => i.l.kind === 'expense' && i.l.cat === 'epargne'), i => i.amt);
+  const byCat = new Map(); items.filter(i => i.l.kind === 'expense' && i.l.cat !== 'epargne').forEach(i => byCat.set(i.l.cat, (byCat.get(i.l.cat) || 0) + i.amt));
+  const top = [...byCat.entries()].sort((a,b) => b[1] - a[1])[0];
+  const dated = items.filter(i => i.d), paid = dated.filter(i => paidOf(i.l, i.d, i.pi));
+  const diff = sum(paid, i => { const p = paidOf(i.l, i.d, i.pi); return (i.l.kind === 'income' ? -1 : 1) * (+p.amount - i.raw) * shareOf(i.l); });
+  return { items, out, inc, save, top, dated, paid, diff };
+}
+const MONTHS_CAP = m => MONTHS_L[m][0].toUpperCase() + MONTHS_L[m].slice(1);
+function recapStat(label, value, color){ return `<div class="kpi"><div class="kpi-l">${label}</div><div class="kpi-v num"${color ? ` style="color:${color}"` : ''}>${value}</div></div>`; }
+function openMonthRecap(y, m){
+  const start = new Date(y, m, 1), end = new Date(y, m + 1, 1), F = periodFlows(start, end), solde = F.inc - F.out;
+  const N = periodFlows(end, new Date(y, m + 2, 1)), big = N.items.filter(i => i.d && i.l.kind === 'expense').sort((a,b) => b.amt - a.amt)[0];
+  const past = end <= today0();
+  const lines = [
+    solde >= 0 ? `Le mois ${past ? 'se termine' : 'devrait se terminer'} avec <b>${eur(solde, 0)}</b> d'avance.` : `Le mois ${past ? 'a coûté' : 'coûtera'} <b>${eur(-solde, 0)}</b> de plus que les rentrées : les provisions et l'épargne prennent le relais.`,
+    F.top ? `Le plus gros poste : <b>${esc(CATS[F.top[0]]?.label || 'Divers')}</b> (${eur(F.top[1], 0)}).` : '',
+    !F.dated.length ? '' : !F.paid.length ? `Astuce : pointe tes ${F.dated.length} échéances quand elles sont payées (rond à droite dans l'échéancier) pour comparer le réel au prévu.`
+      : `${F.paid.length} échéance${F.paid.length > 1 ? 's' : ''} pointée${F.paid.length > 1 ? 's' : ''} sur ${F.dated.length}${Math.abs(F.diff) >= 1 ? `, soit <b>${eur(Math.abs(F.diff), 0)} ${F.diff > 0 ? 'de plus' : 'de moins'}</b> que prévu` : ', pile comme prévu'}.`,
+    `Le mois prochain : <b>${eur(N.out, 0)}</b> de sorties${big ? `, dont ${esc(big.l.label)} (${eur(big.amt, 0)}) le ${big.d.getDate()}` : ''}.`
+  ].filter(Boolean);
+  sheet = null; catSheet = null; tplSheet = null;
+  showPanel(`<div class="sheet-h"><div class="grab"></div></div><div class="sheet-b jet-panel">
+    ${jet(solde >= 0 ? 'bravo' : 'reflechit', 150, 'in')}<h2 class="jet-title">Bilan de ${MONTHS_L[m]} ${y}</h2>
+    <div class="kpis recap-kpis">${recapStat('Rentrées', eur(F.inc, 0), 'var(--green)')}${recapStat('Sorties', eur(F.out, 0))}${recapStat('Solde', (solde >= 0 ? '+' : '−') + eur(Math.abs(solde), 0), solde < 0 ? 'var(--red)' : '')}</div>
+    <ul class="recap-list">${lines.map(t => `<li>${t}</li>`).join('')}</ul>
+    <button class="btn primary block press" data-act="close">Merci Jet</button></div>`);
+}
+function yearRecapData(y){
+  const F = periodFlows(new Date(y, 0, 1), new Date(y + 1, 0, 1));
+  const irr = sum(state.lines.filter(l => isProvision(l) && l.freq !== 'once' && shareOf(l) > 0 && isActive(l)), l => yearlyRaw(l) * shareOf(l));
+  const months = Array.from({ length:12 }, (_, m) => ({ m, out: periodFlows(new Date(y, m, 1), new Date(y, m + 1, 1)).out }));
+  const peak = months.reduce((a, b) => b.out > a.out ? b : a, months[0]);
+  const goalsDone = state.goals.filter(g => goalState(g).done).length, goalsSaved = sum(state.goals, g => +g.saved || 0);
+  return { F, irr, peak, goalsDone, goalsSaved, paidN: Object.values(state.payments).filter(p => p.date.startsWith(String(y))).length };
+}
+function openYearRecap(y){
+  const R = yearRecapData(y), F = R.F;
+  const facts = [
+    `<b>${F.dated.length}</b> échéances anticipées, sans mauvaise surprise.`,
+    R.irr ? `<b>${eur(R.irr, 0)}</b> de dépenses irrégulières lissées au mois (assurances, taxes, entretien…).` : '',
+    F.save || R.goalsSaved ? `<b>${eur(F.save + R.goalsSaved, 0)}</b> mis de côté${R.goalsDone ? `, et ${R.goalsDone} objectif${R.goalsDone > 1 ? 's' : ''} atteint${R.goalsDone > 1 ? 's' : ''} 🎉` : ''}.` : '',
+    F.top ? `Le plus gros poste de l'année : <b>${esc(CATS[F.top[0]]?.label || 'Divers')}</b> (${eur(F.top[1], 0)}).` : '',
+    `Le mois le plus chargé : <b>${MONTHS_L[R.peak.m]}</b> (${eur(R.peak.out, 0)} de sorties).`,
+    R.paidN ? `<b>${R.paidN}</b> paiements pointés dans l'appli.` : ''
+  ].filter(Boolean);
+  state.yearShare = `Notre année ${y} avec Bud Jet : ${F.dated.length} échéances anticipées${R.irr ? `, ${eur(R.irr, 0)} de dépenses irrégulières lissées` : ''}${F.save + R.goalsSaved ? `, ${eur(F.save + R.goalsSaved, 0)} mis de côté` : ''}. Zéro mauvaise surprise ! ${location.origin + location.pathname}`;
+  sheet = null; catSheet = null; tplSheet = null;
+  showPanel(`<div class="sheet-h"><div class="grab"></div></div><div class="sheet-b jet-panel">
+    ${jet('fete', 160, 'in')}<h2 class="jet-title">Ton année ${y} avec Bud Jet</h2>
+    <div class="kpis recap-kpis">${recapStat('Rentrées', eur(F.inc, 0), 'var(--green)')}${recapStat('Sorties', eur(F.out, 0))}${recapStat('Épargne', eur(F.save + R.goalsSaved, 0), 'var(--accent)')}</div>
+    <ul class="recap-list">${facts.map(t => `<li>${t}</li>`).join('')}</ul>
+    <button class="btn primary block press" data-act="year-share">${ic('share')}Partager</button>
+    <button class="btn gray block press" data-act="close" style="margin-top:-6px">Fermer</button></div>`);
+}
+function recapStrip(){
+  const t = today0(), pm = new Date(t.getFullYear(), t.getMonth() - 1, 1), y = t.getMonth() >= 10 ? t.getFullYear() : t.getFullYear() - 1;
+  return `<div class="recap-strip"><button class="chip press" data-act="recap-month" data-y="${pm.getFullYear()}" data-m="${pm.getMonth()}">${ic('cal', 2)}Bilan de ${MONTHS_L[pm.getMonth()]}</button>
+    <button class="chip press" data-act="recap-month" data-y="${t.getFullYear()}" data-m="${t.getMonth()}">${ic('cal', 2)}${MONTHS_CAP(t.getMonth())} en cours</button>
+    <button class="chip press" data-act="recap-year" data-y="${y}">${ic('star', 2)}Année ${y}</button></div>`;
+}
+
 /* ================= objectifs d'épargne ================= */
 const GOAL_ICONS = ['plane','car','house','gift','star','heart','bike','baby','grad','sun'];
 const GOAL_COLORS = { plane:'#0A84FF', car:'#30B0C7', house:'#5E5CE6', gift:'#FF4F8B', star:'#FF9500', heart:'#FF453A', bike:'#34C759', baby:'#AF52DE', grad:'#7D5BD0', sun:'#F5A623' };
@@ -2155,6 +2236,11 @@ function jetAdvice(){
   const ps = proSetAside();
   if(ps) out.push({ id:`pro-${y}-${Math.floor(mo / 3)}`, pose:'reflechit', title:'Activité complémentaire : mets de côté',
     text:`Estimation : environ ${eur(ps.monthly, 0)} par mois pour ${ps.hasCotis ? "l'impôt" : "tes cotisations sociales et l'impôt"} sur un résultat de ${eur(ps.R, 0)} par an.`, link:'<a class="link" href="#provisions">Provisions</a>' });
+  // Bilans : début de mois, et fin / début d'année
+  if(t.getDate() <= 7){ const pm = new Date(y, mo - 1, 1);
+    out.unshift({ id:`recap-${pm.getFullYear()}-${pm.getMonth()}`, pose:'bravo', title:`Ton bilan de ${MONTHS_L[pm.getMonth()]} est prêt`, text:'Rentrées, sorties, échéances pointées et ce qui t\'attend ce mois-ci.', link:`<button class="link" data-act="recap-month" data-y="${pm.getFullYear()}" data-m="${pm.getMonth()}">Voir le bilan</button>` }); }
+  if((mo === 11 && t.getDate() >= 15) || (mo === 0 && t.getDate() <= 20)){ const yy = mo === 11 ? y : y - 1;
+    out.unshift({ id:`recap-year-${yy}`, pose:'fete', title:`Ton année ${yy} avec Bud Jet`, text:'Le récap de ton année : échéances anticipées, dépenses lissées, épargne. À partager !', link:`<button class="link" data-act="recap-year" data-y="${yy}">Voir mon année</button>` }); }
   const off = ls.get('bf.tipsOff', {}) || {};
   return out.filter(a => !off[a.id]);
 }
@@ -2815,6 +2901,11 @@ document.addEventListener('click', async e => {
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
     case 'split-open': openSplit(); return;
+    case 'recap-month': openMonthRecap(+d.y, +d.m); return;
+    case 'recap-year': openYearRecap(+d.y); return;
+    case 'year-share': { const txt = state.yearShare || '';
+      if(navigator.share){ try { await navigator.share({ title:'Bud Jet', text: txt }); } catch {} }
+      else { try { await navigator.clipboard.writeText(txt); toast('Récap copié, colle-le où tu veux'); } catch { toast(txt.slice(0, 80)); } } return; }
     case 'goal-new': openGoal(); return;
     case 'goal-edit': openGoal(d.g); return;
     case 'goal-save': return saveGoalSheet();
