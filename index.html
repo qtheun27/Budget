@@ -243,6 +243,28 @@ button.row:hover{background:var(--fill2)}
 .admin-kpis .skel{height:92px}
 .kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
 .inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.tpl-sit{display:flex;flex-direction:column;gap:12px}
+.tpl-2{display:grid;grid-template-columns:2fr 3fr;gap:10px}
+.frow>.stepper{display:inline-flex;align-items:center;gap:10px;min-width:0;margin-left:auto}
+.stepper b{min-width:18px;text-align:center;font-size:16px}
+.stepper .mini{font-size:20px;font-weight:600;color:var(--accent)}
+.stepper .mini:disabled{opacity:.35}
+.tpl-list{display:flex;flex-direction:column}
+.tpl-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px 10px 14px}
+.tpl-row+.tpl-row{border-top:.5px solid var(--sep)}
+.tpl-row .tl{display:flex;flex-direction:column;align-items:flex-start;min-width:0;text-align:left;color:inherit}
+.tpl-row .t{font-weight:550;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.tpl-row .approx{margin-left:5px;color:var(--fg2)}
+.tpl-row .ttag{vertical-align:2px}
+.tpl-row .s{font-size:12.5px;color:var(--fg2)}
+.tpl-row.off .tl,.tpl-row.off .tamt{opacity:.45}
+.tcheck{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 1.8px var(--fg3);display:grid;place-items:center;color:transparent;transition:background .15s}
+.tcheck svg{width:15px;height:15px}
+.tcheck[aria-pressed="true"]{background:var(--accent);box-shadow:none;color:#fff}
+.tamt{display:flex;align-items:center;gap:4px;background:var(--fill2);border-radius:10px;padding:0 10px;height:36px}
+.tamt input{width:62px;border:0;background:transparent;outline:none;text-align:right;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.tamt span{color:var(--fg2);font-size:14px}
+.tpl-sum{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:4px 4px 0}
 .nbadge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;font-style:normal;display:inline-grid;place-items:center;flex:none}
 .save-card .nbadge{margin:0 4px 0 0}
 .m-only.dotted{position:relative}
@@ -841,7 +863,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1793866589' || 0;
+const BUILD = +'1794473253' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -1328,7 +1350,7 @@ function emptyState(){
   return `<div class="card empty"><div class="save-ic">${ic('jar')}</div><h2>Ton budget est vide</h2>
     <p>Ajoute tes revenus et tes dépenses à leur vraie fréquence. L'appli les lisse en budget mensuel ou hebdomadaire.</p>
     <div class="acts"><button class="btn primary press" data-act="new">${ic('plus',2.4)}Ajouter une ligne</button>
-    <button class="btn gray press" data-act="template">Partir d'un budget type</button></div></div>`;
+    <button class="btn gray press" data-act="be-tpl">Budget belge en 2 minutes</button></div></div>`;
 }
 function loading(){
   return `${header('Chargement', esc(state.meta.name||'Budget du Foyer'), false)}
@@ -1740,7 +1762,7 @@ function viewFoyer(){
     <form class="inline" id="name-form" novalidate><input class="inp" id="h-name" maxlength="40" value="${esc(f['h-name'] ?? (m.name||''))}" aria-label="Nom du foyer" style="box-shadow:none;background:var(--fill2)">
     <button class="btn tint press" type="submit">Enregistrer</button></form></section>`;
   if(!fb){
-    return `${header(esc(state.meta.name||'Budget du Foyer'), 'Réglages', false)}<div class="stack">${catsEntry()}${nameForm}
+    return `${header(esc(state.meta.name||'Budget du Foyer'), 'Réglages', false)}<div class="stack">${tplEntry()}${catsEntry()}${nameForm}
       <section class="card"><div class="card-h"><h2>${state.mode==='cloud' ? 'Budget partagé' : 'Données sur cet appareil'}</h2></div>
       <p class="muted" style="margin:0">${state.mode==='cloud'
         ? "Cet aperçu se partage depuis le menu Partager de la page : ajoute ton ou ta partenaire en accès Contributeur. Pour l'appli installable avec comptes et code d'invitation, ouvre la version en ligne."
@@ -1771,6 +1793,7 @@ function viewFoyer(){
       : `<p class="muted" style="margin:0 0 14px">Crée un code et envoie-le. Ton ou ta partenaire crée son compte dans l'appli, choisit « Rejoindre un foyer » et le saisit. Vous voyez ensuite le même budget, en direct.</p>
         <button class="btn primary press" data-act="invite" ${state.busy?'disabled':''}>${ic('plus',2.4)}Créer un code d'invitation</button>`}
     </section>
+    ${tplEntry()}
     ${helpEntry()}
     ${catsEntry()}
     ${isAdmin() ? adminEntry() : ''}
@@ -1780,6 +1803,151 @@ function viewFoyer(){
       <div class="row" style="padding:0 0 14px">${avatar(me, 'sm')}<span style="min-width:0"><div class="t">${esc(state.user.email)}</div><div class="s">Données hébergées en Belgique (europe-west1)</div></span><span></span></div>
       <button class="btn danger press" data-act="signout">Se déconnecter</button></section>
   </div>`;
+}
+
+/* ================= modèle de budget belge ================= */
+// Montants indicatifs (moyennes belges, à ajuster). w = situation : home 'credit' | 'owner' | 'rent', adults 1-2, cars 0-2, kids 0-6, side (activité complémentaire).
+const owner = w => w.home !== 'rent';
+const BE_ITEMS = w => {
+  const L = [], A = w.adults, K = w.kids, two = people().length === 2 && A === 2;
+  const add = (o) => L.push({ on:true, freq:'monthly', due:null, kw:[], ...o });
+  const me = state.user?.uid, other = two ? people().find(x => x !== me) : '';
+  // Revenus
+  add({ id:'sal1', g:'Revenus', kind:'income', cat:'salaire', label: two ? `Salaire ${firstName(me)}` : A === 2 ? 'Salaire 1' : 'Salaire', amount:2400, due:[0,25], who: two ? me : '', kw:['salaire'] });
+  if(A === 2) add({ id:'sal2', g:'Revenus', kind:'income', cat:'salaire', label: two ? `Salaire ${firstName(other)}` : 'Salaire 2', amount:2100, due:[0,25], who: two ? other : '', kw:['salaire'] });
+  add({ id:'pecule', g:'Revenus', kind:'income', cat:'salaire', label:'Pécule de vacances', amount:2000*A, freq:'annual', due:[6,1], kw:['pecule'] });
+  add({ id:'prime', g:'Revenus', kind:'income', cat:'salaire', label:"Prime de fin d'année (13e mois)", amount:2000*A, freq:'annual', due:[12,15], kw:['prime','13e','treizieme'] });
+  add({ id:'eco', g:'Revenus', kind:'income', cat:'salaire', label:'Éco-chèques', amount:250*A, freq:'annual', due:[6,30], on:false, kw:['eco-cheque','ecocheque','eco cheque'] });
+  if(K) add({ id:'alloc', g:'Revenus', kind:'income', cat:'allocations', label:'Allocations familiales', amount:180*K, due:[0,10], kw:['allocation'] });
+  if(w.side) add({ id:'side', g:'Revenus', kind:'income', cat:'pro', label:'Activité complémentaire', amount:600, pro:100, variable:true, kw:['complementaire','facture','client'] });
+  // Logement
+  if(w.home === 'credit') add({ id:'credit', g:'Logement', kind:'expense', cat:'logement', label:'Crédit hypothécaire', amount:900, due:[0,1], kw:['credit','pret','hypothec'] });
+  if(w.home === 'rent') add({ id:'loyer', g:'Logement', kind:'expense', cat:'logement', label:'Loyer', amount:850, due:[0,1], kw:['loyer'] });
+  if(owner(w)) add({ id:'precompte', g:'Logement', kind:'expense', cat:'impots', label:'Précompte immobilier', amount:1000, freq:'annual', due:[9,15], kw:['precompte'] });
+  add({ id:'incendie', g:'Logement', kind:'expense', cat:'assurances', label: owner(w) ? 'Assurance incendie' : 'Assurance incendie (locataire)', amount: owner(w) ? 450 : 150, freq:'annual', due:[3,1], kw:['incendie','assurance habitation','ethias habitation'] });
+  if(w.home === 'credit') add({ id:'srd', g:'Logement', kind:'expense', cat:'assurances', label:'Assurance solde restant dû', amount:300, freq:'annual', due:[5,1], kw:['solde restant','srd'] });
+  if(owner(w)) add({ id:'chaudiere', g:'Logement', kind:'expense', cat:'logement', label:'Entretien chaudière', amount:150, freq:'annual', due:[10,1], kw:['chaudiere'] });
+  if(owner(w)) add({ id:'travaux', g:'Logement', kind:'expense', cat:'logement', label:'Entretien et petits travaux', amount:60, on:false, kw:['travaux','entretien maison','brico'] });
+  // Énergie et télécom
+  add({ id:'energie', g:'Énergie et télécom', kind:'expense', cat:'energie', label:'Électricité et gaz (acompte)', amount: A === 2 || K ? 220 : 150, due:[0,15], variable:true, kw:['electri','gaz','energie','engie','luminus','totalenergies','mega'] });
+  add({ id:'eau', g:'Énergie et télécom', kind:'expense', cat:'energie', label:'Eau', amount: 70 + 15*(A + K), freq:'quarterly', due:[3,15], variable:true, kw:['eau','swde','vivaqua','inbw','cile','water'] });
+  add({ id:'telecom', g:'Énergie et télécom', kind:'expense', cat:'abonnements', label:'Internet, TV et GSM', amount:90, due:[0,5], kw:['internet','proximus','telenet','orange','voo','scarlet','gsm','mobile'] });
+  add({ id:'streaming', g:'Énergie et télécom', kind:'expense', cat:'abonnements', label:'Streaming (Netflix, Spotify…)', amount:20, on:false, kw:['netflix','spotify','disney','streamz','streaming'] });
+  // Mobilité
+  for(let i = 1; i <= w.cars; i++){
+    const n = w.cars > 1 ? ` ${i}` : '';
+    add({ id:'taxe'+i, g:'Mobilité', kind:'expense', cat:'impots', label:'Taxe de circulation'+n, amount:250, freq:'annual', due:[i === 1 ? 4 : 9, 1], kw:['taxe de circulation','taxe circulation','taxe auto','taxe voiture'] });
+    add({ id:'assauto'+i, g:'Mobilité', kind:'expense', cat:'assurances', label:'Assurance auto'+n, amount:600, freq:'annual', due:[i === 1 ? 2 : 8, 1], kw:['assurance auto','assurance voiture','omnium'] });
+    add({ id:'carbu'+i, g:'Mobilité', kind:'expense', cat:'mobilite', label:(w.cars > 1 ? 'Carburant voiture' : 'Carburant')+n, amount:150, variable:true, kw:['carburant','essence','diesel','mazout auto','carte essence','fuel'] });
+    add({ id:'entauto'+i, g:'Mobilité', kind:'expense', cat:'mobilite', label:'Entretien voiture'+n, amount:400, freq:'annual', due:[10,1], kw:['entretien voiture','entretien auto','garage','pneus'] });
+  }
+  if(!w.cars) add({ id:'transport', g:'Mobilité', kind:'expense', cat:'mobilite', label:'Abonnement SNCB / TEC / STIB', amount:50*A, kw:['sncb','tec','stib','de lijn','abonnement train'] });
+  // Assurances et santé
+  add({ id:'rcfam', g:'Assurances et santé', kind:'expense', cat:'assurances', label:'RC familiale', amount:90, freq:'annual', due:[4,1], kw:['rc familiale','responsabilite civile'] });
+  add({ id:'mutuelle', g:'Assurances et santé', kind:'expense', cat:'sante', label:'Mutualité (cotisation)', amount:35*A, freq:'quarterly', due:[1,15], kw:['mutualite','mutuelle','solidaris','partenamut','helan'] });
+  add({ id:'hospi', g:'Assurances et santé', kind:'expense', cat:'assurances', label:'Assurance hospitalisation', amount:350*A, freq:'annual', due:[1,1], on:false, kw:['hospitalisation','dkv','hospi'] });
+  add({ id:'sante', g:'Assurances et santé', kind:'expense', cat:'sante', label:'Frais médicaux non remboursés', amount:30 + 15*(A + K), variable:true, kw:['medecin','pharmacie','dentiste','frais medicaux'] });
+  // Vie courante
+  add({ id:'courses', g:'Vie courante', kind:'expense', cat:'alimentation', label:'Courses', amount:(A === 2 ? 120 : 70) + 35*K, freq:'weekly', variable:true, kw:['courses','alimentation','supermarche','delhaize','colruyt','aldi','lidl','carrefour'] });
+  add({ id:'vetements', g:'Vie courante', kind:'expense', cat:'divers', label:'Vêtements', amount:40*A + 25*K, variable:true, kw:['vetement','habits'] });
+  add({ id:'sorties', g:'Vie courante', kind:'expense', cat:'loisirs', label:'Sorties et loisirs', amount:60*A + 20*K, variable:true, kw:['sortie','restaurant','resto','loisir'] });
+  add({ id:'vacances', g:'Vie courante', kind:'expense', cat:'loisirs', label:'Vacances', amount:(A === 2 ? 1800 : 1200) + 400*K, freq:'annual', due:[7,1], kw:['vacances','voyage'] });
+  add({ id:'cadeaux', g:'Vie courante', kind:'expense', cat:'loisirs', label:'Saint-Nicolas, Noël et anniversaires', amount:200 + 120*K, freq:'annual', due:[12,1], kw:['cadeau','noel','saint-nicolas','saint nicolas'] });
+  add({ id:'dechets', g:'Vie courante', kind:'expense', cat:'impots', label:'Taxe déchets (commune)', amount:120, freq:'annual', due:[6,30], kw:['dechet','immondice','poubelle'] });
+  // Enfants
+  if(K){
+    add({ id:'rentree', g:'Enfants', kind:'expense', cat:'enfants', label:'Rentrée scolaire', amount:200*K, freq:'annual', due:[8,25], kw:['rentree','scolaire','ecole'] });
+    add({ id:'stages', g:'Enfants', kind:'expense', cat:'enfants', label:'Stages et activités', amount:250*K, freq:'annual', due:[7,1], kw:['stage','activite','sport'] });
+    add({ id:'garderie', g:'Enfants', kind:'expense', cat:'enfants', label:'Crèche ou garderie', amount:150, on:false, kw:['creche','garderie','accueillante'] });
+  }
+  // Activité complémentaire
+  if(w.side){
+    add({ id:'cotis', g:'Activité complémentaire', kind:'expense', cat:'fraispro', label:'Cotisations sociales (indépendant)', amount:100, freq:'quarterly', due:[3,31], pro:100, kw:['cotisation','caisse sociale','xerius','partena','liantis','acerta','ucm'] });
+    add({ id:'compta', g:'Activité complémentaire', kind:'expense', cat:'fraispro', label:'Comptable', amount:500, freq:'annual', due:[3,31], pro:100, kw:['comptable','fiduciaire'] });
+  }
+  // Épargne
+  add({ id:'epargne', g:'Épargne', kind:'expense', cat:'epargne', label:'Épargne', amount:200, kw:['epargne','livret'] });
+  add({ id:'pension', g:'Épargne', kind:'expense', cat:'epargne', label:'Épargne-pension (avantage fiscal)', amount:1050*A, freq:'annual', due:[12,15], kw:['epargne-pension','epargne pension','pension'] });
+  return L;
+};
+/** Une ligne existante correspond-elle déjà à cette suggestion ? (mots-clés, sans les lignes d'exemple) */
+function tplExisting(it){
+  return state.lines.find(l => !l.example && l.kind === it.kind && it.kw.some(k => { const n = norm(l.label);
+    return k.includes(' ') || k.length >= 5 ? n.includes(k) : n.split(/[^a-z0-9-]+/).some(t => t === k.trim() || (k.length >= 4 && t.startsWith(k))); }));
+}
+/** Prochaine date : due = [mois (0 = chaque mois), jour]. */
+function tplDue(it){
+  if(!it.due || it.freq === 'weekly') return '';
+  const t = today0(), [m, d] = it.due;
+  const base = m ? new Date(t.getFullYear(), m - 1, d) : new Date(t.getFullYear(), t.getMonth(), d);
+  const step = m ? (FREQ[it.freq].months || 12) : 1;
+  let x = base, i = 0; while(x < t && i < 60) x = addMonths(base, step * ++i);   // depuis la date de base : pas de dérive en fin de mois
+  return iso(x);
+}
+let tplSheet = null;
+function tplEntry(){
+  return `<button class="card save-card press" data-act="be-tpl" style="text-align:left;width:100%">
+    <span class="save-ic">${ic('star')}</span><span class="grow"><strong>Budget belge en 2 minutes</strong><br><span class="muted small">${state.lines.some(l => !l.example) ? 'Ajoute les dépenses belges que tu as peut-être oubliées' : "Toutes les charges d'un foyer belge, prêtes à ajuster"}</span></span>
+    <span class="chev">${ic('chev')}</span></button>`;
+}
+function openTpl(){
+  tplSheet = { w:{ home:'credit', adults: 2, cars:1, kids:0, side: state.lines.some(l => proPart(l) > 0) }, edits:{}, dropExamples: state.lines.some(l => l.example) };
+  sheet = null; catSheet = null; renderTpl(true);
+}
+function tplRows(){
+  return BE_ITEMS(tplSheet.w).map(it => { const e = tplSheet.edits[it.id] || {}, ex = tplExisting(it);
+    return { ...it, ex, on: e.on ?? (ex ? false : it.on), amountStr: e.amount ?? String(Math.round(it.amount)) }; });
+}
+const tplMonthly = r => { const v = parseAmount(r.amountStr); return isFinite(v) && v > 0 ? v * FREQ[r.freq].perYear / 12 : 0; };
+function tplSummary(){
+  const R = tplRows().filter(r => r.on), inc = sum(R.filter(r => r.kind==='income'), tplMonthly), exp = sum(R.filter(r => r.kind==='expense'), tplMonthly);
+  return { n: R.length, inc, exp };
+}
+function tplSumHTML(){ const t = tplSummary();
+  return `<div class="tpl-sum"><div><b class="num">${t.n}</b> ligne${t.n>1?'s':''}</div><div class="muted small">Revenus <b class="num" style="color:var(--green)">${eur(t.inc,0)}</b> · Dépenses <b class="num">${eur(t.exp,0)}</b> par mois</div></div>`; }
+function tplHTML(){
+  const w = tplSheet.w, rows = tplRows(), groups = [...new Set(rows.map(r => r.g))];
+  const seg = (key, opts) => { const i = opts.findIndex(o => o[0] === w[key]);
+    return `<div class="seg" role="group"><span class="seg-ind" style="width:calc((100% - 4px)/${opts.length});transform:translateX(${i*100}%)"></span>${opts.map(([v,l]) => `<button data-tset="${key}:${v}" aria-pressed="${w[key]===v}">${l}</button>`).join('')}</div>`; };
+  const MN = ['janv.','févr.','mars','avril','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const sub = r => `${FREQ[r.freq].label}${r.due && r.due[0] ? ' · ' + MN[r.due[0]-1] : r.due && r.freq==='monthly' ? ' · le ' + r.due[1] : ''}${r.freq !== 'monthly' && r.freq !== 'weekly' ? ` · <span class="num" data-tm="${r.id}">≈ ${eur(tplMonthly(r),0)}/mois</span>` : r.freq === 'weekly' ? ` · <span class="num" data-tm="${r.id}">≈ ${eur(tplMonthly(r),0)}/mois</span>` : ''}`;
+  return `<div class="sheet-h"><div class="grab"></div>
+    <div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">Budget belge</h3><button class="r" data-act="tpl-create">Ajouter</button></div></div>
+  <div class="sheet-b">
+    <p class="muted small" style="margin:0">Décris ton foyer, coche ce qui te concerne et ajuste les montants. Les montants proposés sont des moyennes belges indicatives : remplace-les par les tiens dès que tu les connais.</p>
+    <div class="tpl-sit">
+      <div><span class="flabel">Logement</span>${seg('home', [['credit','Crédit'],['owner','Propriétaire'],['rent','Locataire']])}</div>
+      <div class="tpl-2"><div><span class="flabel">Revenus</span>${seg('adults', [[1,'1'],[2,'2']])}</div><div><span class="flabel">Voitures</span>${seg('cars', [[0,'0'],[1,'1'],[2,'2']])}</div></div>
+      <div class="field"><div class="frow"><span>Enfants</span>
+        <span class="stepper"><button class="mini press" data-tkids="-1" ${w.kids<=0?'disabled':''} aria-label="Un enfant de moins">−</button><b class="num">${w.kids}</b><button class="mini press" data-tkids="1" ${w.kids>=6?'disabled':''} aria-label="Un enfant de plus">+</button></span></div>
+        <div class="frow"><span>Activité complémentaire</span><span class="muted small" style="flex:1;min-width:0">Indépendant</span><label class="switch"><input type="checkbox" id="t-side" ${w.side?'checked':''}><span></span></label></div></div>
+    </div>
+    ${groups.map(g => `<div><span class="flabel">${g}</span><div class="list tpl-list">${rows.filter(r => r.g === g).map(r => `
+      <div class="tpl-row${r.on ? '' : ' off'}"><button class="tcheck press" data-ttog="${r.id}" aria-pressed="${r.on}" aria-label="${esc(r.label)}">${ic('check',2.8)}</button>
+        <button class="tl" data-ttog="${r.id}"><span class="t">${esc(r.label)}${r.ex ? '<span class="ttag">Déjà là</span>' : ''}${r.variable ? '<span class="approx">≈</span>' : ''}</span><span class="s">${sub(r)}</span></button>
+        <span class="tamt"><input id="t-a-${r.id}" data-tamt="${r.id}" inputmode="decimal" value="${esc(r.amountStr)}" aria-label="Montant ${esc(r.label)}" ${r.on?'':'tabindex="-1"'}><span>€</span></span></div>`).join('')}</div></div>`).join('')}
+    ${tplSheet.dropExamples ? `<label class="check"><input type="checkbox" id="t-drop" ${tplSheet.drop !== false ? 'checked' : ''}>Retirer les lignes d'exemple</label>` : ''}
+    <div id="tpl-sum">${tplSumHTML()}</div>
+    <button class="btn primary block press" data-act="tpl-create">${ic('plus',2.4)}Ajouter à mon budget</button>
+  </div>`;
+}
+function renderTpl(first){
+  const b = document.querySelector('#sheet .sheet-b'), top = b && !first ? b.scrollTop : 0;
+  showPanel(tplHTML()); const nb = document.querySelector('#sheet .sheet-b'); if(nb) nb.scrollTop = top;
+}
+async function createFromTpl(){
+  const R = tplRows().filter(r => r.on && parseAmount(r.amountStr) > 0);
+  if(!R.length){ toast('Coche au moins une ligne'); return; }
+  const now = Date.now();
+  const lines = R.map((r, i) => { const l = { id: uid(), kind:r.kind, label:r.label.slice(0,60), amount: Math.round(parseAmount(r.amountStr)*100)/100, freq:r.freq, cat:r.cat,
+      due: tplDue(r), end:'', saved:0, pro: r.pro || 0, variable: !!r.variable, createdAt: now + i };
+    if(r.who && hasPeople() && people().includes(r.who)) l.who = r.who; return l; });
+  const drop = tplSheet.dropExamples && tplSheet.drop !== false ? state.lines.filter(l => l.example).map(l => l.id) : [];
+  closeSheet();
+  if(drop.length) await Store.bulkRemove(drop);
+  await Store.bulkSave(lines);
+  toast(`${lines.length} lignes ajoutées. Ajuste-les à ton rythme.`);
+  if(state.route !== 'accueil') location.hash = '#accueil';
 }
 
 /* ================= centre d'aide ================= */
@@ -1975,7 +2143,7 @@ function closeSheet(){
   const el = $('#sheet'); el.classList.remove('on'); el.style.transform=''; $('#scrim').classList.remove('on');
   document.documentElement.style.overflow='';
   setTimeout(()=>{ if(!el.classList.contains('on')){ el.hidden = true; $('#scrim').hidden = true; el.innerHTML=''; } }, 420);
-  sheet = null; catSheet = null;
+  sheet = null; catSheet = null; tplSheet = null;
 }
 function sheetHTML(editing){
   const s = sheet;
@@ -2180,6 +2348,9 @@ document.addEventListener('click', async e => {
   if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
+  if(d.tset && tplSheet){ const [k, v] = d.tset.split(':'); tplSheet.w[k] = k === 'home' ? v : +v; renderTpl(); return; }
+  if(d.tkids && tplSheet){ tplSheet.w.kids = Math.max(0, Math.min(6, tplSheet.w.kids + +d.tkids)); renderTpl(); return; }
+  if(d.ttog && tplSheet){ const r = tplRows().find(x => x.id === d.ttog); if(!r) return; tplSheet.edits[r.id] = { ...(tplSheet.edits[r.id]||{}), on: !r.on }; renderTpl(); return; }
   if(d.ctopic){ state.chat.topic = d.ctopic; state.chat.draft = $('#chat-input')?.value ?? state.chat.draft; return render(); }
   if(d.xtone){ state.adminTone = d.xtone; state.adminMsg = $('#x-msg')?.value ?? state.adminMsg; return render(); }
   if(d.edit){ const l = state.lines.find(x=>x.id===d.edit); if(l) openSheet(l); return; }
@@ -2248,6 +2419,8 @@ document.addEventListener('click', async e => {
     case 'del-yes': { const id = sheet.id, name = sheet.label; closeSheet(); if(await Store.remove(id)) toast(`« ${name} » supprimée`); return; }
     case 'admin-refresh': loadAdmin(); return;
     case 'chat-send': return sendChat();
+    case 'be-tpl': openTpl(); return;
+    case 'tpl-create': return createFromTpl();
     case 'chat-status': { const uid = state.chat.uid, t = state.supportList.find(x => x.uid===uid); if(!t) return;
       await Store.setSupportStatus(uid, t.status==='resolved' ? 'open' : 'resolved'); toast(t.status==='resolved' ? 'Conversation rouverte' : 'Marquée comme résolue'); return; }
     case 'banner-close': ls.set('bf.banner', (state.config.banner||{}).id || ''); return render();
@@ -2295,6 +2468,17 @@ async function sendChat(){
   else { state.chat.draft = text; render(); }
 }
 const autoGrow = el => { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 160) + 'px'; };
+document.addEventListener('input', e => {
+  const id = e.target.dataset && e.target.dataset.tamt; if(!id || !tplSheet) return;
+  tplSheet.edits[id] = { ...(tplSheet.edits[id]||{}), amount: e.target.value };
+  const r = tplRows().find(x => x.id === id), m = document.querySelector(`[data-tm="${id}"]`); if(r && m) m.textContent = `≈ ${eur(tplMonthly(r),0)}/mois`;
+  $('#tpl-sum').innerHTML = tplSumHTML();
+});
+document.addEventListener('change', e => {
+  if(!tplSheet) return;
+  if(e.target.id === 't-side'){ tplSheet.w.side = e.target.checked; renderTpl(); }
+  if(e.target.id === 't-drop'){ tplSheet.drop = e.target.checked; }
+});
 document.addEventListener('input', e => { if(e.target.id==='chat-input'){ state.chat.draft = e.target.value; autoGrow(e.target); } });
 document.addEventListener('keydown', e => { if(e.target.id==='chat-input' && e.key==='Enter' && !e.shiftKey && isDesk()){ e.preventDefault(); sendChat(); } });
 document.addEventListener('input', e => { if(e.target.id==='x-msg'){ state.adminMsg = e.target.value; const c = $('#x-count'); if(c) c.textContent = `${e.target.value.length}/280`; } });
