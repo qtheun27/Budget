@@ -272,6 +272,16 @@ button.row:hover{background:var(--fill2)}
 .recap-kpis .kpi-v{font-size:18px;letter-spacing:-.02em}
 .recap-list{margin:0;padding:0 0 0 18px;text-align:left;color:var(--fg2);display:flex;flex-direction:column;gap:6px;width:100%;font-size:14.5px}
 .recap-list b{color:var(--fg)}
+.pot-warn{display:flex;gap:10px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--orange-soft)}
+.pot-warn>div{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.pot-det{margin-top:12px;border-top:.5px solid var(--sep);padding-top:10px}
+.pot-det summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:14px;list-style:none}
+.pot-det summary::-webkit-details-marker{display:none}
+.pd-block{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--fill2)}
+.pd-h{font-weight:650;margin-bottom:4px}
+.pd-l{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--fg2);padding:2px 0}
+.pd-l b{color:var(--fg);font-weight:600}
+.pd-l.strong{border-top:.5px solid var(--sep);margin-top:4px;padding-top:6px;color:var(--fg);font-weight:600}
 .pot-rows{display:flex;flex-direction:column;gap:10px}
 .pot-row{display:flex;align-items:center;gap:12px}
 .pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -2150,24 +2160,43 @@ const privMonthly = l => isActive(l) ? yearlyRaw(l) * (1 - proPart(l)) / 12 : 0;
 function potCommun(){
   const P = people(); if(P.length < 2) return null;
   const sp = state.meta.split || { mode:'equal' }, mode = SPLIT_MODES[sp.mode] ? sp.mode : 'equal';
-  const common = state.lines.filter(l => !whoOf(l));
+  const act = state.lines.filter(isActive), mine = u => act.filter(l => whoOf(l) === u);
+  const common = act.filter(l => !whoOf(l));
   const out = sum(common.filter(l => l.kind === 'expense'), privMonthly), inn = sum(common.filter(l => l.kind === 'income'), privMonthly);
   const need = Math.max(0, out - inn);
-  const inc = Object.fromEntries(P.map(u => [u, sum(state.lines.filter(l => whoOf(l) === u && l.kind === 'income'), privMonthly)]));
-  const persOut = Object.fromEntries(P.map(u => [u, sum(state.lines.filter(l => whoOf(l) === u && l.kind === 'expense'), privMonthly)]));
-  const totInc = sum(P, u => inc[u]);
+  // Activité indépendante : le résultat (après impôt estimé) revient à la personne qui l'exerce.
+  // Les parts pro des lignes communes sont rattachées à cette personne si elle est seule à avoir des revenus pro.
+  const proOwners = P.filter(u => mine(u).some(l => l.kind === 'income' && proPart(l) > 0));
+  const proLines = u => act.filter(l => proPart(l) > 0 && (whoOf(l) === u || (!whoOf(l) && proOwners.length === 1 && proOwners[0] === u)));
+  const proM = l => yearlyRaw(l) * proPart(l) / 12;
+  const row = u => {
+    const inc = sum(mine(u).filter(l => l.kind === 'income'), privMonthly), persOut = sum(mine(u).filter(l => l.kind === 'expense'), privMonthly);
+    const PL = proLines(u), R = sum(PL.filter(l => l.kind === 'income'), proM) - sum(PL.filter(l => l.kind === 'expense'), proM);
+    const hasCotis = PL.some(l => l.kind === 'expense' && lineHas(l, ['cotisation', 'caisse sociale', 'xerius', 'partena', 'liantis', 'acerta', 'ucm', 'securex']));
+    const pro = R > 0 ? (hasCotis ? R * 0.6 : R * (1 - 0.205) * 0.6) : R;
+    return { uid:u, inc, persOut, R, pro, avail: inc + pro };
+  };
+  const rows = P.map(row), tot = sum(rows, r => Math.max(0, r.avail));
   let w;
-  if(mode === 'income' && totInc > 0) w = Object.fromEntries(P.map(u => [u, inc[u] / totInc]));
-  else if(mode === 'custom'){ const sh = sp.shares || {}, t = sum(P, u => +sh[u] || 0); w = Object.fromEntries(P.map(u => [u, t ? (+sh[u] || 0) / t : 1 / P.length])); }
-  else w = Object.fromEntries(P.map(u => [u, 1 / P.length]));
-  const rows = P.map(u => ({ uid:u, pct:w[u], amount: need * w[u], income: inc[u], left: inc[u] - persOut[u] - need * w[u] }));
-  return { mode, need, out, inn, rows, noIncome: mode === 'income' && totInc <= 0 };
+  if(mode === 'income' && tot > 0) w = r => Math.max(0, r.avail) / tot;
+  else if(mode === 'custom'){ const sh = sp.shares || {}, t = sum(P, u => +sh[u] || 0); w = r => t ? (+sh[r.uid] || 0) / t : 1 / P.length; }
+  else w = () => 1 / P.length;
+  rows.forEach(r => { r.pct = w(r); r.amount = need * r.pct; r.left = r.avail - r.persOut - r.amount; });
+  return { mode, need, out, inn, rows, noIncome: mode === 'income' && tot <= 0 };
 }
 function potCard(){
   const pc = potCommun(); if(!pc || !(pc.out > 0)) return '';
+  const neg = pc.rows.filter(r => r.left < 0 && (r.inc || r.pro));
+  const line = (label, v, strong) => `<div class="pd-l${strong ? ' strong' : ''}"><span>${label}</span><b class="num">${Math.round(v) === 0 || strong && v >= 0 ? '' : v > 0 ? '+' : '−'}${eur(Math.abs(v), 0)}</b></div>`;
   return `<section class="card pot-card"><div class="card-h"><h2>Pot commun</h2><button class="link" data-act="split-open">${SPLIT_MODES[pc.mode]} ›</button></div>
     <div class="muted small" style="margin:-4px 0 10px">Chaque mois, pour couvrir ${eur(pc.need)} de dépenses communes${pc.inn ? ` (après ${eur(pc.inn)} de rentrées communes)` : ''}&nbsp;:</div>
-    <div class="pot-rows">${pc.rows.map(r => `<div class="pot-row">${avatar(r.uid, 'sm')}<span class="grow"><b>${esc(firstName(r.uid))}</b><span class="muted small">${Math.round(r.pct*100)} %${r.income ? ` · reste perso ${eur(r.left, 0)}` : ''}</span></span><span class="num pot-amt">${eur(r.amount)}</span></div>`).join('')}</div>
+    <div class="pot-rows">${pc.rows.map(r => `<div class="pot-row">${avatar(r.uid, 'sm')}<span class="grow"><b>${esc(firstName(r.uid))}</b><span class="muted small">${Math.round(r.pct*100)} %${r.inc || r.pro ? ` · reste perso <span style="${r.left < 0 ? 'color:var(--red)' : ''}">${eur(r.left, 0)}</span>` : ''}</span></span><span class="num pot-amt">${eur(r.amount)}</span></div>`).join('')}</div>
+    ${neg.length && pc.mode !== 'income' ? `<div class="pot-warn">${jet('alerte', 44)}<div><b>${neg.map(r => esc(firstName(r.uid))).join(' et ')} dépasserai${neg.length > 1 ? 'en' : ''}t ${neg.length > 1 ? 'leurs' : 'ses'} revenus</b><span class="muted small">Avec des revenus différents, la répartition selon les revenus est plus juste : chacun garde la même part de ce qu'il gagne.</span><button class="link" data-act="split-income">Répartir selon les revenus</button></div></div>` : ''}
+    <details class="pot-det"><summary>Détail du calcul</summary>
+      <div class="pd-block">${line('Dépenses communes (part privée)', -pc.out)}${pc.inn ? line('Rentrées communes', pc.inn) : ''}${line('À couvrir par le pot commun', pc.need, true)}</div>
+      ${pc.rows.map(r => `<div class="pd-block"><div class="pd-h">${esc(firstName(r.uid))}</div>${line('Revenus attribués (part privée)', r.inc)}${r.R ? line(r.R > 0 ? "Résultat de l'activité, après impôt estimé" : "Perte de l'activité", r.pro) : ''}${line('Dépenses attribuées (part privée)', -r.persOut)}${line(`Pot commun (${Math.round(r.pct*100)} %)`, -r.amount)}${line('Reste perso', r.left, true)}</div>`).join('')}
+      <p class="muted small" style="margin:8px 0 0">Seules les lignes attribuées à une personne (« Pour qui ») comptent dans ses revenus et dépenses ; tout le reste est commun. Les montants annuels ou trimestriels sont lissés au mois.</p>
+    </details>
     ${pc.noIncome ? `<p class="muted small" style="margin:10px 0 0">Pour répartir selon les revenus, attribue les salaires à chacun (« Pour qui » dans la ligne). En attendant, partage à parts égales.</p>`
       : `<p class="muted small" style="margin:10px 0 0">Astuce de Jet : programme un virement permanent de ce montant vers le compte commun, le lendemain du salaire.</p>`}
   </section>`;
@@ -2905,6 +2934,7 @@ document.addEventListener('click', async e => {
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
     case 'split-open': openSplit(); return;
+    case 'split-income': Store.saveSplit({ mode:'income' }); toast('Répartition selon les revenus'); return;
     case 'recap-month': openMonthRecap(+d.y, +d.m); return;
     case 'recap-year': openYearRecap(+d.y); return;
     case 'year-share': { const txt = state.yearShare || '';
