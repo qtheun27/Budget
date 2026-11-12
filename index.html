@@ -236,13 +236,30 @@ button.row:hover{background:var(--fill2)}
 .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--accent-soft);color:var(--fg);font-size:13.5px;margin-bottom:14px}
 .banner .btn{height:32px;font-size:13px;border-radius:9px}
 .banner.warn{background:color-mix(in srgb,var(--orange) 16%,transparent)}
-.banner>span{display:flex;gap:8px;align-items:flex-start;flex:1;min-width:0}
-.banner>span>svg{width:17px;height:17px;flex:none;margin-top:1px;color:var(--orange)}
+.banner>span{flex:1;min-width:0}
+.banner>span>svg{width:17px;height:17px;display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--orange)}
 .banner .mini{margin:-4px -4px -4px 0}
 .admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 .admin-kpis .skel{height:92px}
 .kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
 .inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.jet{display:block;object-fit:contain;flex:none;user-select:none;-webkit-user-select:none;pointer-events:none}
+.jet-float{animation:jetFloat 3.2s ease-in-out infinite}
+.jet-in{animation:jetIn .7s cubic-bezier(.2,1.4,.4,1) both, jetFloat 3.2s ease-in-out .7s infinite}
+@keyframes jetFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes jetIn{0%{opacity:0;transform:translateY(40px) scale(.8) rotate(-6deg)}60%{opacity:1}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.jet-float,.jet-in{animation:none}}
+.jet-card{display:flex;gap:12px;align-items:center;padding:12px 16px 12px 10px}
+.jet-card .grow{flex:1;min-width:0}
+.jet-t{font-weight:650;font-size:15px}
+.jet-say{display:flex;gap:10px;align-items:flex-end}
+.jet-bubble{position:relative;flex:1;min-width:0;background:var(--card);box-shadow:var(--shadow);border-radius:16px 16px 16px 6px;padding:10px 13px;font-weight:600;font-size:14.5px}
+.jet-bubble small{display:block;font-weight:400;color:var(--fg2);font-size:13px;margin-top:3px}
+.sheet .jet-bubble{background:var(--card);box-shadow:none}
+.jet-panel{align-items:center;text-align:center;padding-top:6px}
+.jet-title{font-size:22px;letter-spacing:-.01em;margin:0}
+.jet-text{color:var(--fg2);margin:0;max-width:34ch}
+.card.empty .jet{margin:0 auto 4px}
 .tpl-sit{display:flex;flex-direction:column;gap:12px}
 .tpl-2{display:grid;grid-template-columns:2fr 3fr;gap:10px}
 .frow>.stepper{display:inline-flex;align-items:center;gap:10px;min-width:0;margin-left:auto}
@@ -863,7 +880,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794476799' || 0;
+const BUILD = +'1794477407' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -1347,8 +1364,8 @@ function exampleBanner(){
       : `<button class="btn tint press" data-act="clear-ask">Repartir de zéro</button>`}</div>`;
 }
 function emptyState(){
-  return `<div class="card empty"><div class="save-ic">${ic('jar')}</div><h2>Ton budget est vide</h2>
-    <p>Ajoute tes revenus et tes dépenses à leur vraie fréquence. L'appli les lisse en budget mensuel ou hebdomadaire.</p>
+  return `<div class="card empty">${jet('arrive', 120, 'in')}<h2>Ton budget est vide</h2>
+    <p>Mon nom est Jet, Bud Jet. Je prépare ton budget belge en 2 minutes, ou ajoute tes lignes une par une à leur vraie fréquence : je les lisse au mois.</p>
     <div class="acts"><button class="btn primary press" data-act="new">${ic('plus',2.4)}Ajouter une ligne</button>
     <button class="btn gray press" data-act="be-tpl">Budget belge en 2 minutes</button></div></div>`;
 }
@@ -1403,6 +1420,7 @@ function viewHome(){
         <div class="split" aria-hidden="true">${segs.filter(s=>s.v>0).map(s=>`<span style="flex-grow:${s.v/base};background:${s.c}"></span>`).join('')}</div>
         <div class="legend">${segs.map(s=>`<span><i class="dot" style="background:${s.c}"></i>${s.l} <b class="num">${eur(s.v)}</b></span>`).join('')}</div>
       </section>
+      ${jetTip(T, up)}
       <div class="kpis${anim}">
         <div class="kpi"><div class="kpi-l">${isPro?'Revenus pro':'Revenus'}</div><div class="kpi-v num" style="color:var(--green)">${eur(T.income,0)}</div></div>
         <div class="kpi"><div class="kpi-l">${isPro?'Frais pro':'Dépenses'}</div><div class="kpi-v num">${eur(isPro ? T.spend + T.savings : T.spend,0)}</div></div>
@@ -1805,6 +1823,43 @@ function viewFoyer(){
   </div>`;
 }
 
+/* ================= Bud Jet, l'assistant ================= */
+/** Image de l'assistant. pose : arrive | bravo | reflechit | alerte | fete ; anim : 'in' (entrée), 'float' (flotte) */
+const jet = (pose, size = 72, anim = 'float') => `<img class="jet jet-${anim}" src="assets/jet/${pose}.webp" width="${size}" height="${size}" alt="Bud Jet" decoding="async" draggable="false">`;
+/** Conseil du jour sur l'accueil, selon la situation du budget. */
+function jetTip(T, up){
+  if(!state.lines.length) return '';
+  const P_ = PERIODS[state.period], soon = up.find(u => u.l.kind === 'expense' && daysBetween(today0(), u.d) <= 7);
+  const late = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l) && provisionState(l).status === 'late').length;
+  let pose, title, text, link = '';
+  if(T.free < 0 && scopeNow() !== 'pro' && whoNow() !== 'common'){ pose = 'alerte'; title = 'On dépasse un peu…'; text = `Tes sorties dépassent tes rentrées de ${eur(-T.free)} ${P_.noun}. Regardons ensemble où ajuster.`; link = '<a class="link" href="#budget">Voir le budget</a>'; }
+  else if(soon){ pose = 'alerte'; title = `${esc(soon.l.label)} ${relDays(soon.d)}`; text = `${approx(soon.l)}${eur(soon.amt * shareOf(soon.l))} à prévoir sur le compte.`; link = '<a class="link" href="#echeancier">Échéancier</a>'; }
+  else if(late){ pose = 'reflechit'; title = 'Petit rattrapage'; text = `${late} dépense${late>1?'s':''} irrégulière${late>1?'s':''} à mettre de côté pour être prêt à l'échéance.`; link = '<a class="link" href="#provisions">Provisions</a>'; }
+  else { pose = 'bravo'; title = 'Budget sous contrôle'; text = T.free > 0 ? `Il te reste ${eur(T.free)} ${P_.noun} après tout. Bien joué !` : 'Tout est prévu, aucune mauvaise surprise en vue.'; }
+  return `<section class="card jet-card">${jet(pose, 68)}<div class="grow"><div class="jet-t">${title}</div><div class="muted small">${text}</div>${link ? `<div style="margin-top:6px">${link}</div>` : ''}</div></section>`;
+}
+/** Grand panneau de l'assistant (présentation, célébration). */
+function jetPanel(pose, title, text, cta, act = 'close', extra = ''){
+  sheet = null; catSheet = null; tplSheet = null;
+  showPanel(`<div class="sheet-h"><div class="grab"></div></div>
+    <div class="sheet-b jet-panel">${jet(pose, 190, 'in')}
+      <h2 class="jet-title">${title}</h2><p class="jet-text" id="jet-text">${text}</p>
+      <button class="btn primary block press" data-act="${act}">${cta}</button>${extra}</div>`);
+}
+/** Présentation de Bud Jet, une seule fois par appareil, une fois le budget chargé. */
+function maybeJetIntro(){
+  if(ls.get('bf.jetIntro', false) || !['cloud','local'].includes(state.mode) || state.route !== 'accueil' || !$('#sheet').hidden) return;
+  ls.set('bf.jetIntro', true);
+  const fresh = !state.lines.some(l => !l.example);
+  setTimeout(() => {
+    jetPanel('arrive', '« Mon nom est Jet. Bud Jet. »', fresh
+      ? "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. On commence par ton budget belge ? Ça prend 2 minutes."
+      : "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. Je surveille tes échéances et je te préviens avant qu'elles tombent.",
+      fresh ? 'Préparer mon budget' : "C'est parti", fresh ? 'be-tpl' : 'close',
+      fresh ? '<button class="btn gray block press" data-act="close" style="margin-top:-6px">Plus tard</button>' : '');
+  }, 600);
+}
+
 /* ================= modèle de budget belge ================= */
 // Montants indicatifs (moyennes belges, à ajuster). w = situation : home 'credit' | 'owner' | 'rent', adults 1-2, cars 0-2, kids 0-6, side (activité complémentaire).
 const owner = w => w.home !== 'rent';
@@ -1914,7 +1969,7 @@ function tplHTML(){
   return `<div class="sheet-h"><div class="grab"></div>
     <div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">Budget belge</h3><button class="r" data-act="tpl-create">Ajouter</button></div></div>
   <div class="sheet-b">
-    <p class="muted small" style="margin:0">Décris ton foyer, coche ce qui te concerne et ajuste les montants. Les montants proposés sont des moyennes belges indicatives : remplace-les par les tiens dès que tu les connais.</p>
+    <div class="jet-say">${jet('reflechit', 76)}<div class="jet-bubble">Dis-moi comment est ton foyer : je prépare les charges belges habituelles.<small>Les montants sont des moyennes indicatives : remplace-les par les tiens dès que tu les connais.</small></div></div>
     <div class="tpl-sit">
       <div><span class="flabel">Logement</span>${seg('home', [['credit','Crédit'],['owner','Propriétaire'],['rent','Locataire']])}</div>
       <div class="tpl-2"><div><span class="flabel">Revenus</span>${seg('adults', [[1,'1'],[2,'2']])}</div><div><span class="flabel">Voitures</span>${seg('cars', [[0,'0'],[1,'1'],[2,'2']])}</div></div>
@@ -1946,8 +2001,8 @@ async function createFromTpl(){
   closeSheet();
   if(drop.length) await Store.bulkRemove(drop);
   await Store.bulkSave(lines);
-  toast(`${lines.length} lignes ajoutées. Ajuste-les à ton rythme.`);
   if(state.route !== 'accueil') location.hash = '#accueil';
+  setTimeout(() => jetPanel('fete', 'Mission accomplie !', `${lines.length} lignes ajoutées à ton budget. Ajuste les montants à ton rythme : moi, je veille sur les échéances.`, 'Voir mon budget'), 450);
 }
 
 /* ================= centre d'aide ================= */
@@ -2011,6 +2066,7 @@ function viewHelp(){
   if(fb && !state.pushState){ state.pushState = 'checking'; setTimeout(refreshPush, 0); }
   const pushOff = fb && state.pushState && state.pushState !== 'on';
   return `${header('<a class="link" href="#foyer">‹ Réglages</a>', 'Aide', false)}<div class="stack">
+    <div class="jet-say">${jet('reflechit', 76)}<div class="jet-bubble">Une question ? Regarde d'abord ci-dessous.<small>Sinon, écris au support en bas de la page : on te répond ici, avec une notification.</small></div></div>
     <section><div class="group-h" style="padding-top:0"><span>Questions fréquentes</span></div>
       <div class="list faq">${FAQ.map(([q,a]) => `<details class="faq-i"><summary>${esc(q)}<span class="chev">${ic('chev')}</span></summary><div class="faq-a">${a.replace(/\{R\}/g, settingsWhere())}</div></details>`).join('')}</div></section>
     ${fb ? `<section class="card chat-card"><div class="card-h"><h2>Écrire au support</h2>${t && t.status==='resolved' ? '<span class="pill good">Résolu</span>' : t ? '<span class="pill info">En cours</span>' : ''}</div>
@@ -2118,6 +2174,7 @@ function render(){
   main.innerHTML = v();
   const bn = appBanners(); if(bn){ const ph = main.querySelector('header.ph'); ph ? ph.insertAdjacentHTML('afterend', bn) : main.insertAdjacentHTML('afterbegin', bn); }
   lastPeriodRender = state.period; lastScopeRender = scopeNow()+whoNow();
+  maybeJetIntro();
 }
 
 /* ================= sheet (add / edit) ================= */
