@@ -931,7 +931,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794480365' || 0;
+const BUILD = +'1794480520' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -2288,9 +2288,12 @@ function jetPanel(pose, title, text, cta, act = 'close', extra = ''){
 /** Présentation de Bud Jet, une seule fois par appareil, une fois le budget chargé. */
 function maybeJetIntro(){
   if(ls.get('bf.jetIntro', false) || !['cloud','local'].includes(state.mode) || state.route !== 'accueil' || !$('#sheet').hidden) return;
-  ls.set('bf.jetIntro', true);
   const fresh = !state.lines.some(l => !l.example);
-  setTimeout(() => {
+  clearTimeout(maybeJetIntro.t);
+  maybeJetIntro.t = setTimeout(() => {
+    // Ne jamais interrompre un panneau ouvert entre-temps : on réessaiera au prochain affichage.
+    if(!$('#sheet').hidden || state.route !== 'accueil' || ls.get('bf.jetIntro', false)) return;
+    ls.set('bf.jetIntro', true);
     jetPanel('coucou', '« Mon nom est Jet. Bud Jet. »', fresh
       ? "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. On commence par ton budget belge ? Ça prend 2 minutes."
       : "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. Je surveille tes échéances et je te préviens avant qu'elles tombent.",
