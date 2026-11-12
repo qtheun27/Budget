@@ -941,7 +941,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794481214' || 0;
+const BUILD = +'1794481658' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -2212,7 +2212,10 @@ function potCard(){
     ${neg.length && pc.mode !== 'income' ? `<div class="pot-warn">${jet('alerte', 44)}<div><b>${neg.map(r => esc(firstName(r.uid))).join(' et ')} dépasserai${neg.length > 1 ? 'en' : ''}t ${neg.length > 1 ? 'leurs' : 'ses'} revenus</b><span class="muted small">Avec des revenus différents, la répartition selon les revenus est plus juste : chacun garde la même part de ce qu'il gagne.</span><button class="link" data-act="split-income">Répartir selon les revenus</button></div></div>` : ''}
     <details class="pot-det"><summary>Détail du calcul</summary>
       <div class="pd-block">${line('Dépenses communes (part privée)', -pc.out)}${pc.inn ? line('Rentrées communes', pc.inn) : ''}${line('À couvrir par le pot commun', pc.need, true)}</div>
-      ${pc.rows.map(r => `<div class="pd-block"><div class="pd-h">${esc(firstName(r.uid))}</div>${line('Revenus attribués (part privée)', r.inc)}${r.R ? line(r.R > 0 ? "Résultat de l'activité, après impôt estimé" : "Perte de l'activité", r.pro) : ''}${line('Dépenses attribuées (part privée)', -r.persOut)}${line(`Pot commun (${Math.round(r.pct*100)} %)`, -r.amount)}${line('Reste perso', r.left, true)}</div>`).join('')}
+      ${(() => { const avail = pc.inn + sum(pc.rows, r => r.avail), spend = pc.out + sum(pc.rows, r => r.persOut), left = avail - spend;
+        return `<div class="pd-block"><div class="pd-h">Le foyer, au total</div>${line('Revenus du foyer (part privée, activité après impôt estimé)', avail)}${line('Dépenses communes et perso (épargne comprise)', -spend)}${line('Reste du foyer', left, true)}
+          <p class="muted small" style="margin:6px 0 0">${left < 0 ? `Quelle que soit la répartition, il manque ${eur(-left, 0)} par mois à deux : la répartition ne fait que montrer qui le porte.` : `À deux, il reste ${eur(left, 0)} par mois : la répartition décide comment ce reste se partage.`}</p></div>`; })()}
+      ${pc.rows.map(r => `<div class="pd-block"><div class="pd-h">${esc(firstName(r.uid))}</div>${line('Revenus attribués (part privée)', r.inc)}${r.R ? line(r.R > 0 ? "Résultat de l'activité, après impôt estimé" : "Perte de l'activité (lignes Pro sans revenu pro ?)", r.pro) : ''}${line('Dépenses attribuées (part privée)', -r.persOut)}${line(`Pot commun (${Math.round(r.pct*100)} %)`, -r.amount)}${line('Reste perso', r.left, true)}</div>`).join('')}
       <p class="muted small" style="margin:8px 0 0">Seules les lignes attribuées à une personne (« Pour qui ») comptent dans ses revenus et dépenses ; tout le reste est commun. Les montants annuels ou trimestriels sont lissés au mois.</p>
     </details>
     ${pc.noIncome ? `<p class="muted small" style="margin:10px 0 0">Pour répartir selon les revenus, attribue les salaires à chacun (« Pour qui » dans la ligne). En attendant, partage à parts égales.</p>`
