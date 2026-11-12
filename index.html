@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="apple-mobile-web-app-title" content="Bud Jet">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,7 +16,7 @@
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>Budget du Foyer</title>
+<title>Bud Jet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: phone = large-title pages + glass tab bar + bottom sheet; desktop (>=900px) = glass sidebar + two-column grid + centered sheet. */
@@ -519,7 +519,7 @@ img.avatar{object-fit:cover;background:var(--fill)}
 
 <div id="app">
   <aside class="side" aria-label="Navigation">
-    <div class="brand"><span class="brand-mark" data-ic="logo"></span><span id="side-name">Budget du Foyer</span></div>
+    <div class="brand"><span class="brand-mark" data-ic="logo"></span><span id="side-name">Bud Jet</span></div>
     <button class="side-add press" data-act="new"><span data-ic="plus"></span>Nouvelle ligne</button>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
@@ -854,7 +854,7 @@ const state = {
   scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
   who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null, support: null, supportList: [], chat: { uid:null, msgs:[], draft:'', topic:'' },
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
-  mode: 'loading', slow:false, lines: [], meta: {name:'Budget du Foyer'}
+  mode: 'loading', slow:false, lines: [], meta: {name:'Bud Jet'}
 };
 const TEMPLATE = JSON.parse(document.getElementById('tpl').textContent);
 const uid = () => 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
@@ -863,7 +863,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794473253' || 0;
+const BUILD = +'1794475953' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -994,7 +994,7 @@ const Store = {
   },
   setSupportStatus(uid, status){ const { S } = F; return this.write(S.updateDoc(S.doc(F.db, 'support', uid), { status })); },
   onUser(u){
-    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Budget du Foyer' }; this.autoDone = false; catDocs = {}; rebuildCats();
+    this.stop(); state.hid = null; state.lines = []; state.invite = null; state.meta = { name:'Bud Jet' }; this.autoDone = false; catDocs = {}; rebuildCats();
     if(!u){ clearTimeout(this.slowT); state.user = null; state.mode = 'auth'; render(); return; }
     state.user = { uid:u.uid, email:u.email || '', verified: !!u.emailVerified }; state.mode = 'loading'; render();
     const { S } = F;
@@ -1285,7 +1285,7 @@ function renderNav(){
     : state.mode==='cloud'
     ? '<b>Budget à deux.</b> Partage cette page avec ton ou ta partenaire en accès <b>Contributeur</b> : vos modifications se synchronisent en direct.'
     : '<b>Données locales.</b> Elles restent sur cet appareil.';
-  $('#side-name').textContent = state.meta.name || 'Budget du Foyer';
+  $('#side-name').textContent = state.meta.name || 'Bud Jet';
 }
 
 function periodBar(){
@@ -1353,7 +1353,7 @@ function emptyState(){
     <button class="btn gray press" data-act="be-tpl">Budget belge en 2 minutes</button></div></div>`;
 }
 function loading(){
-  return `${header('Chargement', esc(state.meta.name||'Budget du Foyer'), false)}
+  return `${header('Chargement', esc(state.meta.name||'Bud Jet'), false)}
   ${state.slow?'<div class="banner"><span>Le budget partagé ne répond pas encore. Vérifie ta connexion, il se chargera dès que possible.</span></div>':''}
   <div class="grid"><div class="skel" style="height:190px"></div><div class="skel"></div><div class="skel" style="height:220px"></div></div>`;
 }
@@ -1391,7 +1391,7 @@ function viewHome(){
     : sc==='pro' ? 'Revenus professionnels moins frais professionnels, avant impôts et cotisations.' : 'Après dépenses, épargne et provisions lissées.';
   const pillTxt = sc==='pro' ? (T.free<0 ? 'En perte' : 'Bénéficiaire') : w==='common' && T.free<0 ? 'À financer' : freeLabel;
   const PT = hasPro() && sc==='all' ? totals(state.period, 'pro') : null;
-  return `${header(new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}), esc(state.meta.name||'Budget du Foyer'))}
+  return `${header(new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'}), esc(state.meta.name||'Bud Jet'))}
   ${exampleBanner()}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid two">
@@ -1587,7 +1587,7 @@ function viewProvisions(){
 function viewAuth(){
   const t = state.authTab || 'in', f = state.form;
   return `<div class="gate-wrap"><div class="gate-card">
-    <div class="gate-brand"><span class="brand-mark">${ic('logo',2.1)}</span><h1>Budget du Foyer</h1>
+    <div class="gate-brand"><span class="brand-mark">${ic('logo',2.1)}</span><h1>Bud Jet</h1>
       <p>${t==='up' ? 'Crée ton compte pour partager ton budget avec ton foyer.' : 'Connecte-toi pour retrouver ton budget sur tous tes appareils.'}</p></div>
     <div class="seg" role="group" aria-label="Compte"><span class="seg-ind" style="width:calc((100% - 4px)/2);transform:translateX(${t==='in'?0:100}%)"></span>
       <button data-authtab="in" aria-pressed="${t==='in'}">Se connecter</button><button data-authtab="up" aria-pressed="${t==='up'}">Créer un compte</button></div>
@@ -1762,7 +1762,7 @@ function viewFoyer(){
     <form class="inline" id="name-form" novalidate><input class="inp" id="h-name" maxlength="40" value="${esc(f['h-name'] ?? (m.name||''))}" aria-label="Nom du foyer" style="box-shadow:none;background:var(--fill2)">
     <button class="btn tint press" type="submit">Enregistrer</button></form></section>`;
   if(!fb){
-    return `${header(esc(state.meta.name||'Budget du Foyer'), 'Réglages', false)}<div class="stack">${tplEntry()}${catsEntry()}${nameForm}
+    return `${header(esc(state.meta.name||'Bud Jet'), 'Réglages', false)}<div class="stack">${tplEntry()}${catsEntry()}${nameForm}
       <section class="card"><div class="card-h"><h2>${state.mode==='cloud' ? 'Budget partagé' : 'Données sur cet appareil'}</h2></div>
       <p class="muted" style="margin:0">${state.mode==='cloud'
         ? "Cet aperçu se partage depuis le menu Partager de la page : ajoute ton ou ta partenaire en accès Contributeur. Pour l'appli installable avec comptes et code d'invitation, ouvre la version en ligne."
@@ -2386,7 +2386,7 @@ document.addEventListener('click', async e => {
       catch(e){ console.warn('Connexion Google', e); if(!['auth/popup-closed-by-user','auth/cancelled-popup-request','auth/user-cancelled'].includes(e.code)) state.formErr = errMsg(e); }
       state.busy = false; return render(); }
     case 'push-test': { try { const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification('Budget du Foyer', { body: "C'est ainsi que tes rappels s'afficheront.", icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'test' }); }
+      await reg.showNotification('Bud Jet', { body: "C'est ainsi que tes rappels s'afficheront.", icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'test' }); }
       catch { toast("La notification de test n'a pas pu s'afficher."); } return; }
     case 'cat-new': openCatSheet(null, { kind: state.catKind || 'expense' }); return;
     case 'cat-new-inline': if(sheet){ sheet.label = $('#f-label').value; openCatSheet(null, { kind: sheet.kind, returnTo: sheet }); } return;
@@ -2410,7 +2410,7 @@ document.addEventListener('click', async e => {
     case 'copy-code': { const c = fmtCode(state.invite.code);
       try { await navigator.clipboard.writeText(c); toast('Code copié'); } catch { const el = $('#invite-code'); const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Code sélectionné, copie-le'); } return; }
     case 'share-code': { const c = fmtCode(state.invite.code);
-      try { await navigator.share({ title:'Budget du Foyer', text:`Rejoins notre budget « ${state.meta.name} » sur Budget du Foyer. Crée ton compte, choisis « Rejoindre un foyer » et saisis le code ${c}`, url: location.origin + location.pathname }); } catch {} return; }
+      try { await navigator.share({ title:'Bud Jet', text:`Rejoins notre budget « ${state.meta.name} » sur Bud Jet. Crée ton compte, choisis « Rejoindre un foyer » et saisis le code ${c}`, url: location.origin + location.pathname }); } catch {} return; }
     case 'new': return openSheet(null, d.kind);
     case 'close': return closeSheet();
     case 'save': return saveSheet();

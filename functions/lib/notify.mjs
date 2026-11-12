@@ -1,4 +1,4 @@
-// Logique partagée des notifications — Budget du Foyer
+// Logique partagée des notifications — Bud Jet
 // Utilisée par la fonction Firebase planifiée (functions/index.mjs) et, en secours, par GitHub Actions (notify/send.mjs).
 // Aucune dépendance : la base, web-push et FieldValue sont fournis par l'appelant.
 

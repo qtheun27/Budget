@@ -1,4 +1,4 @@
-// Service worker — Budget du Foyer
+// Service worker — Bud Jet
 // - Page : réseau d'abord (mises à jour immédiates), cache en secours hors ligne.
 // - Fichiers de l'appli et SDK Firebase (versions figées, immuables) : cache d'abord.
 // - Les échanges avec Firebase (Auth, Firestore) ne sont jamais interceptés : le SDK gère lui-même le hors ligne.
@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; }
-  const title = d.title || 'Budget du Foyer';
+  const title = d.title || 'Bud Jet';
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '', tag: d.tag || 'rappel', renotify: true,
     icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',

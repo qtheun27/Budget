@@ -1,6 +1,6 @@
 {
-  "name": "Budget du Foyer",
-  "short_name": "Budget",
+  "name": "Bud Jet · Budget du foyer",
+  "short_name": "Bud Jet",
   "description": "Le budget familial lissé : dépenses annuelles, trimestrielles et mensuelles ramenées à la semaine, au mois ou à l'année.",
   "lang": "fr-BE",
   "start_url": "./#accueil",

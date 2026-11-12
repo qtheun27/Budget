@@ -1,4 +1,4 @@
-# Budget du Foyer
+# Bud Jet · Budget du foyer
 
 Appli web installable (PWA) de budget familial. On encode chaque revenu ou dépense **à sa vraie fréquence**
 (hebdo, mensuelle, bimestrielle, trimestrielle, semestrielle, annuelle, ponctuelle) et l'appli la ramène

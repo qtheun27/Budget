@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bud Jet · Personnage</title>
+<style>
+:root{--bg:#F2F2F7;--card:#fff;--fg:#0B0B0F;--fg2:#6B6B76;--accent:#0A66FF;--sep:rgba(0,0,0,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1C1C1E;--fg:#F5F5F7;--fg2:#A1A1AA;--sep:rgba(255,255,255,.1)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;padding:28px 16px 48px}
+h1{font-size:30px;letter-spacing:-.02em;margin:0 0 6px}
+.lead{color:var(--fg2);margin:0 0 24px;max-width:60ch}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));max-width:1100px}
+.card{background:var(--card);border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase}
+h2{font-size:21px;margin:4px 0 14px}
+.row{display:flex;gap:16px;align-items:center}
+.icon{width:96px;height:96px;border-radius:22px;flex:none;box-shadow:0 6px 18px rgba(10,102,255,.25)}
+.bubble{position:relative;background:var(--bg);border-radius:16px;padding:10px 13px;font-weight:600;font-size:15px}
+.bubble small{display:block;font-weight:400;color:var(--fg2);font-size:13px;margin-top:2px}
+.mini{display:flex;gap:10px;margin-top:16px;align-items:center;color:var(--fg2);font-size:13px}
+.mini svg{width:34px;height:34px}
+p.d{color:var(--fg2);font-size:14.5px;margin:14px 0 0}
+</style>
+</head>
+<body>
+<h1>Bud Jet : trois styles</h1>
+<p class="lead">Chaque proposition montre l'icône de l'appli (écran d'accueil et Play Store), le personnage qui se présente, et sa version miniature dans l'appli. Dis-moi laquelle te plaît, ou ce que tu veux mélanger.</p>
+<div class="grid">
+
+<!-- A : l'agent -->
+<section class="card">
+  <span class="tag">Style A</span><h2>L'agent secret</h2>
+  <div class="row">
+    <svg class="icon" viewBox="0 0 120 120" aria-label="Icône style A">
+      <defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F7BFF"/><stop offset="1" stop-color="#0047C2"/></linearGradient>
+      <linearGradient id="gca" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD25E"/><stop offset="1" stop-color="#F2A516"/></linearGradient></defs>
+      <rect width="120" height="120" rx="27" fill="url(#ga)"/>
+      <circle cx="60" cy="56" r="33" fill="url(#gca)"/>
+      <circle cx="60" cy="56" r="28" fill="none" stroke="#E39A0E" stroke-width="2" opacity=".6"/>
+      <rect x="35" y="45" width="21" height="13" rx="6" fill="#111"/><rect x="64" y="45" width="21" height="13" rx="6" fill="#111"/>
+      <path d="M56 50h8" stroke="#111" stroke-width="3"/>
+      <path d="M39 48l6-1" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M68 48l6-1" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+      <path d="M50 70c5 4 15 4 20 0" stroke="#8A4B00" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M48 94l12-6 12 6-12 6z" fill="#111"/><path d="M48 94l12-6 12 6-12 6z" fill="#111" transform="rotate(180 60 94)" opacity="0"/>
+      <path d="M44 88l16 6-16 6zM76 88l-16 6 16 6z" fill="#111"/><circle cx="60" cy="94" r="3.5" fill="#111"/>
+    </svg>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>Ma mission : que ton foyer n'ait plus jamais de mauvaise surprise.</small></div>
+  </div>
+  <div class="mini"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="56" fill="#F7B52C"/><rect x="28" y="46" width="26" height="16" rx="7" fill="#111"/><rect x="66" y="46" width="26" height="16" rx="7" fill="#111"/><path d="M54 52h12" stroke="#111" stroke-width="4"/><path d="M46 78c8 6 20 6 28 0" stroke="#8A4B00" stroke-width="4" fill="none" stroke-linecap="round"/></svg>Version miniature, à côté de ses messages</div>
+  <p class="d">Une <b>pièce de monnaie</b> avec lunettes noires et nœud papillon. Le clin d'œil James Bond est immédiat, chaleureux et drôle. C'est le plus « personnage » des trois.</p>
+</section>
+
+<!-- B : le jet -->
+<section class="card">
+  <span class="tag">Style B</span><h2>Le petit jet</h2>
+  <div class="row">
+    <svg class="icon" viewBox="0 0 120 120" aria-label="Icône style B">
+      <defs><linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1FB6FF"/><stop offset="1" stop-color="#0A57E0"/></linearGradient></defs>
+      <rect width="120" height="120" rx="27" fill="url(#gb)"/>
+      <path d="M16 92c18-4 30-14 42-30" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".35"/>
+      <path d="M22 100c16-2 30-10 42-24" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".25"/>
+      <g transform="rotate(-35 70 52)">
+        <path d="M40 52c0-7 8-12 26-12h16c10 0 18 5 22 12-4 7-12 12-22 12H66c-18 0-26-5-26-12z" fill="#fff"/>
+        <path d="M62 40l-10-16h10l18 16zM62 64l-10 16h10l18-16z" fill="#DCE9FF"/>
+        <path d="M44 52l-8-10h8l8 10zM44 52l-8 10h8l8-10z" fill="#DCE9FF"/>
+        <circle cx="86" cy="50" r="5.5" fill="#0A57E0"/><circle cx="87.5" cy="48.5" r="1.8" fill="#fff"/>
+        <path d="M95 55c-2 2-5 3-8 3" stroke="#0A57E0" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>Je pilote ton budget, toi tu profites du voyage.</small></div>
+  </div>
+  <div class="mini"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="56" fill="#0A66FF"/><g transform="rotate(-35 62 60) translate(-4 8)"><path d="M30 52c0-7 8-12 26-12h16c10 0 18 5 22 12-4 7-12 12-22 12H56c-18 0-26-5-26-12z" fill="#fff"/><circle cx="76" cy="50" r="5" fill="#0A66FF"/></g></svg>Version miniature, à côté de ses messages</div>
+  <p class="d">Un <b>avion souriant</b> qui laisse une trace montante, comme une courbe d'épargne. Il évoque la vitesse (« le budget en 2 minutes ») et reste lisible en tout petit. Plus sobre que l'agent.</p>
+</section>
+
+<!-- C : monogramme -->
+<section class="card">
+  <span class="tag">Style C</span><h2>Le monogramme</h2>
+  <div class="row">
+    <svg class="icon" viewBox="0 0 120 120" aria-label="Icône style C">
+      <defs><linearGradient id="gc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16161D"/><stop offset="1" stop-color="#2B2B38"/></linearGradient>
+      <linearGradient id="gcc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A8BFF"/><stop offset="1" stop-color="#7B5CFF"/></linearGradient></defs>
+      <rect width="120" height="120" rx="27" fill="url(#gc)"/>
+      <path d="M42 26v58" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="61" cy="66" r="19" fill="none" stroke="url(#gcc)" stroke-width="11"/>
+      <path d="M86 40h14M80 30h14M90 50h10" stroke="#3A8BFF" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+    </svg>
+    <div class="bubble">« Mon nom est Jet. Bud Jet. »<small>Ton budget, en clair, à deux.</small></div>
+  </div>
+  <div class="mini"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="56" fill="#1C1C24"/><path d="M44 30v52" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="62" cy="64" r="17" fill="none" stroke="#3A8BFF" stroke-width="10"/></svg>Version miniature, à côté de ses messages</div>
+  <p class="d">Un <b>« b » dont la boucle est une pièce</b>, avec des traits de vitesse. Très Apple / Revolut, élégant et sérieux. Le personnage vit alors surtout dans le ton des textes, moins dans le dessin.</p>
+</section>
+
+</div>
+</body>
+</html>

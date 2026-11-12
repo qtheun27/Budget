@@ -1,4 +1,4 @@
-// Fonctions serveur — Budget du Foyer (Firebase, région europe-west1, comme la base)
+// Fonctions serveur — Bud Jet (Firebase, région europe-west1, comme la base)
 //
 // rappelsDuMatin : chaque jour à 8 h (heure de Bruxelles), rappels d'échéance groupés par compte.
 // messageSupport : à chaque message du centre d'aide, notification immédiate
