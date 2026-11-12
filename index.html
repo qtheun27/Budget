@@ -270,6 +270,18 @@ button.row:hover{background:var(--fill2)}
 .jet-card .grow{padding-right:22px}
 .pro-aside{display:flex;gap:10px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--fill2)}
 .pro-aside>div{display:flex;flex-direction:column;min-width:0}
+.goal-list{display:flex;flex-direction:column;padding:4px 0}
+.card.goal-list{padding:6px 16px}
+.goal{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:10px 0}
+.goal+.goal{border-top:.5px solid var(--sep)}
+.goal-main{display:flex;gap:12px;align-items:center;min-width:0;text-align:left;color:inherit}
+.goal-t{display:flex;flex-direction:column;min-width:0}
+.goal-t b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal .prog{grid-column:1/-1;height:7px}
+.goal-add{height:32px;font-size:13px;padding:0 12px;gap:4px}
+.goal-add svg{width:14px;height:14px}
+.goal.done .goal-t b{color:var(--green)}
+.goal-ic{padding:0 6px}
 .pot-rows{display:flex;flex-direction:column;gap:10px}
 .pot-row{display:flex;align-items:center;gap:12px}
 .pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -911,7 +923,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794480027' || 0;
+const BUILD = +'1794480206' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -1483,13 +1495,14 @@ function viewHome(){
       <div class="kpis${anim}">
         <div class="kpi"><div class="kpi-l">${isPro?'Revenus pro':'Revenus'}</div><div class="kpi-v num" style="color:var(--green)">${eur(T.income,0)}</div></div>
         <div class="kpi"><div class="kpi-l">${isPro?'Frais pro':'Dépenses'}</div><div class="kpi-v num">${eur(isPro ? T.spend + T.savings : T.spend,0)}</div></div>
-        <div class="kpi"><div class="kpi-l">${isPro?'Marge':'Taux d\'épargne'}</div><div class="kpi-v num">${Math.round((isPro ? (T.income ? T.free/T.income : 0) : T.rate)*100)}&nbsp;%</div></div>
+        <div class="kpi"><div class="kpi-l">${isPro?'Marge':'Épargne'}</div><div class="kpi-v num">${Math.round((isPro ? (T.income ? T.free/T.income : 0) : T.rate)*100)}&nbsp;%</div></div>
       </div>
       ${whoNow()==='all' || whoNow()==='common' ? potCard() : ''}
+      ${goalsHomeCard()}
       ${PT ? `<section class="card pro-card"><div class="card-h"><h2>Activité complémentaire</h2><button class="link" data-scope="pro">Vue pro</button></div>
         <div class="kpis${anim}">
-          <div class="kpi"><div class="kpi-l">Revenus pro</div><div class="kpi-v num" style="color:var(--green)">${eur(PT.income,0)}</div></div>
-          <div class="kpi"><div class="kpi-l">Frais pro</div><div class="kpi-v num">${eur(PT.spend + PT.savings,0)}</div></div>
+          <div class="kpi"><div class="kpi-l">Revenus</div><div class="kpi-v num" style="color:var(--green)">${eur(PT.income,0)}</div></div>
+          <div class="kpi"><div class="kpi-l">Frais</div><div class="kpi-v num">${eur(PT.spend + PT.savings,0)}</div></div>
           <div class="kpi"><div class="kpi-l">Résultat</div><div class="kpi-v num" style="color:${PT.free<0?'var(--red)':'var(--fg)'}">${eur(PT.free,0)}</div></div>
         </div>${(() => { const ps = proSetAside(); return ps ? `<div class="pro-aside">${jet('reflechit', 44)}<div><b class="num">≈ ${eur(ps.monthly, 0)} / mois à mettre de côté</b><span class="muted small">${ps.hasCotis ? "Impôt estimé à 40 % du résultat (tes cotisations sont déjà dans tes frais)." : 'Cotisations sociales ≈ 20,5 % du résultat, puis impôt estimé à 40 %.'} Estimation indicative.</span></div></div>` : ''; })()}
         <p class="muted small" style="margin:10px 0 0">${P_.noun[0].toUpperCase()+P_.noun.slice(1)}, part professionnelle des lignes mixtes comprise.</p></section>` : ''}
@@ -1643,9 +1656,11 @@ function viewProvisions(){
   const L = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l)).map(l=>({l, s:provisionState(l)})).sort((a,b)=>(a.s.due||9e15)-(b.s.due||9e15));
   const need = sum(L, x=>x.s.needed), saved = sum(L,x=>x.s.saved), target = sum(L,x=>x.s.amount);
   const smooth = sum(L, x=>x.s.smooth);
-  return `${header('Dépenses irrégulières lissées', 'Provisions', false)}
+  return `${header('Dépenses irrégulières et objectifs', 'Provisions', false)}
   ${exampleBanner()}
   ${filtersBlock()}
+  ${goalsSection()}
+  <div class="group-h" style="padding-top:14px"><span>Dépenses irrégulières lissées</span></div>
   ${!L.length ? `<div class="card empty"><div class="save-ic">${ic('jar')}</div><h2>Aucune provision</h2><p>Les dépenses trimestrielles, semestrielles, annuelles ou ponctuelles apparaissent ici avec le montant à mettre de côté chaque mois.</p><button class="btn primary press" data-act="new">${ic('plus',2.4)}Ajouter une dépense annuelle</button></div>` : `
   <section class="card hero" style="margin-bottom:14px">
     <div class="hero-l">À verser ce mois-ci sur ton compte provisions</div>
@@ -1764,7 +1779,10 @@ function viewCategories(){
 let catSheet = null;
 function showPanel(html){
   const el = $('#sheet'); el.innerHTML = html;
-  if(el.hidden){ el.hidden = false; $('#scrim').hidden = false; requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.classList.add('on'); $('#scrim').classList.add('on'); })); document.documentElement.style.overflow='hidden'; }
+  // Toujours (ré)afficher : un panneau qui se ferme peut encore être visible pendant son animation de sortie.
+  el.hidden = false; $('#scrim').hidden = false; el.style.transform = '';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.classList.add('on'); $('#scrim').classList.add('on'); }));
+  document.documentElement.style.overflow='hidden';
 }
 function openCatSheet(id, opts = {}){
   const c = id ? CATS[id] : null;
@@ -1980,6 +1998,87 @@ function forecastCard(){
   </section>`;
 }
 
+/* ================= objectifs d'épargne ================= */
+const GOAL_ICONS = ['plane','car','house','gift','star','heart','bike','baby','grad','sun'];
+const GOAL_COLORS = { plane:'#0A84FF', car:'#30B0C7', house:'#5E5CE6', gift:'#FF4F8B', star:'#FF9500', heart:'#FF453A', bike:'#34C759', baby:'#AF52DE', grad:'#7D5BD0', sun:'#F5A623' };
+function goalState(g){
+  const target = +g.target || 0, saved = Math.max(0, +g.saved || 0), left = Math.max(0, target - saved), done = saved >= target - 0.005;
+  const d = validDate(g.date) ? parseDate(g.date) : null, months = d ? Math.max(1, Math.round(daysBetween(today0(), d) / 30.44)) : null;
+  return { target, saved, left, done, d, months, monthly: d && !done ? left / months : null, pct: target ? Math.min(1, saved / target) : 0, past: d && d < today0() };
+}
+const goalTile = g => `<span class="tile" style="background:${GOAL_COLORS[g.icon] || '#0A84FF'}">${ic(g.icon || 'star', 2.1)}</span>`;
+function goalRow(g, compact){
+  const st = goalState(g);
+  return `<div class="goal${st.done ? ' done' : ''}"><button class="goal-main press" data-act="goal-edit" data-g="${esc(g.id)}">${goalTile(g)}
+      <span class="goal-t"><b>${esc(g.label)}</b><span class="muted small num">${eur(st.saved, 0)} sur ${eur(st.target, 0)}${st.done ? ' · atteint 🎉' : st.monthly ? ` · ≈ ${eur(st.monthly, 0)} / mois jusqu'en ${MONTHS_L[st.d.getMonth()]}` : st.past ? ' · date dépassée' : ''}</span></span></button>
+    ${st.done ? '' : `<button class="btn tint press goal-add" data-act="goal-add" data-g="${esc(g.id)}">${ic('plus', 2.4)}${compact ? '' : 'Verser'}</button>`}
+    <div class="prog${st.done ? ' good' : ''}"><span style="width:${st.pct * 100}%"></span></div></div>`;
+}
+function goalsSection(){
+  const G = [...state.goals].sort((a,b) => (goalState(a).done - goalState(b).done) || (a.date || '9').localeCompare(b.date || '9'));
+  return `<section class="goals"><div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Objectifs d'épargne</h2><button class="link" data-act="goal-new">+ Nouvel objectif</button></div>
+    ${G.length ? `<div class="card goal-list">${G.map(g => goalRow(g)).join('')}</div>`
+      : `<div class="card jet-card">${jet('reflechit', 60)}<div class="grow"><div class="jet-t">Un projet en tête ?</div><div class="muted small">Vacances, voiture, travaux : donne-moi un montant et une date, je calcule combien mettre de côté chaque mois.</div><div style="margin-top:6px"><button class="link" data-act="goal-new">Créer un objectif</button></div></div></div>`}</section>`;
+}
+function goalsHomeCard(){
+  const G = state.goals.filter(g => !goalState(g).done).slice(0, 2); if(!G.length) return '';
+  return `<section class="card"><div class="card-h"><h2>Objectifs</h2><a class="link" href="#provisions">Tout voir</a></div><div class="goal-list">${G.map(g => goalRow(g, true)).join('')}</div></section>`;
+}
+let goalSheet = null;
+function openGoal(id){
+  const g = id ? state.goals.find(x => x.id === id) : null;
+  goalSheet = g ? { ...g, targetStr: String(g.target), savedStr: String(g.saved || 0), confirm:false } : { id: uid(), label:'', targetStr:'', savedStr:'0', date:'', icon:'plane', isNew:true, confirm:false };
+  sheet = null; catSheet = null; tplSheet = null; renderGoal();
+  if(!g) setTimeout(() => $('#g-label')?.focus({ preventScroll:true }), 380);
+}
+function renderGoal(){
+  const g = goalSheet;
+  showPanel(`<div class="sheet-h"><div class="grab"></div><div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">${g.isNew ? 'Nouvel objectif' : 'Objectif'}</h3><button class="r" data-act="goal-save">${g.isNew ? 'Créer' : 'OK'}</button></div></div>
+  <div class="sheet-b">
+    <div class="field"><div class="frow"><input type="text" id="g-label" maxlength="40" placeholder="Nom (ex. Vacances en Italie)" value="${esc(g.label)}" aria-label="Nom de l'objectif" style="text-align:left"></div></div>
+    <div class="field"><div class="frow"><span>Montant visé</span><input id="g-target" inputmode="decimal" placeholder="0" value="${esc(g.targetStr)}" aria-label="Montant visé"><span style="min-width:0">€</span></div>
+      <div class="frow"><span>Déjà de côté</span><input id="g-saved" inputmode="decimal" value="${esc(g.savedStr)}" aria-label="Déjà de côté"><span style="min-width:0">€</span></div>
+      <div class="frow"><span>Pour quand</span><input type="date" id="g-date" value="${esc(g.date || '')}" aria-label="Date visée"></div></div>
+    <div><span class="flabel">Icône</span><div class="chips">${GOAL_ICONS.map(k => `<button class="chip press goal-ic" data-gicon="${k}" aria-pressed="${g.icon === k}" aria-label="${k}"><span class="tile" style="background:${GOAL_COLORS[k]}">${ic(k, 2.1)}</span></button>`).join('')}</div></div>
+    <p class="hint" id="g-hint"></p>
+    ${g.isNew ? '' : g.confirm ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn gray block press" data-act="goal-del-no">Garder</button><button class="btn danger block press" data-act="goal-del-yes">${ic('trash')}Supprimer</button></div>` : `<button class="btn danger block press" data-act="goal-del">${ic('trash')}Supprimer cet objectif</button>`}
+  </div>`);
+  goalHint();
+}
+function goalHint(){
+  const h = $('#g-hint'); if(!h || !goalSheet) return;
+  const t = parseAmount($('#g-target')?.value), sv = parseAmount($('#g-saved')?.value) || 0, d = $('#g-date')?.value;
+  if(!(t > 0)){ h.textContent = "Avec une date, je calcule combien mettre de côté chaque mois."; return; }
+  const st = goalState({ target:t, saved:sv, date:d });
+  h.textContent = st.done ? 'Objectif déjà atteint 🎉' : st.monthly ? `Il faut mettre ≈ ${eur(st.monthly, 0)} de côté chaque mois.` : `Il reste ${eur(st.left, 0)} à mettre de côté.`;
+}
+function saveGoalSheet(){
+  const g = goalSheet, label = ($('#g-label')?.value || '').trim(), target = parseAmount($('#g-target')?.value), saved = Math.max(0, parseAmount($('#g-saved')?.value) || 0), date = $('#g-date')?.value || '';
+  if(!label){ toast("Donne un nom à l'objectif"); return; }
+  if(!(target > 0)){ toast('Indique le montant visé'); return; }
+  if(date && !validDate(date)){ toast('Date incomplète : vérifie l\'année'); return; }
+  const out = { id:g.id, label:label.slice(0,40), target: Math.round(target*100)/100, saved: Math.round(saved*100)/100, icon:g.icon, createdAt: g.createdAt || Date.now(), done: saved >= target };
+  if(date) out.date = date;
+  closeSheet(); goalSheet = null; Store.saveGoal(out); toast(g.isNew ? 'Objectif créé' : 'Objectif enregistré');
+}
+function openGoalAdd(id){
+  const g = state.goals.find(x => x.id === id); if(!g) return; const st = goalState(g);
+  goalSheet = { ...g, adding:true }; sheet = null; catSheet = null; tplSheet = null;
+  showPanel(`<div class="sheet-h"><div class="grab"></div><div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">${esc(g.label)}</h3><button class="r" data-act="goal-add-save">Verser</button></div></div>
+    <div class="sheet-b"><p class="hint" style="margin:0">Combien viens-tu de mettre de côté ?</p>
+    <div class="amount"><input id="g-add" inputmode="decimal" value="${st.monthly ? Math.round(st.monthly) : ''}" placeholder="0" aria-label="Montant versé"><span>€</span></div>
+    <p class="hint">Déjà ${eur(st.saved, 0)} sur ${eur(st.target, 0)}.</p></div>`);
+  setTimeout(() => { const a = $('#g-add'); if(a){ a.focus(); a.select(); } }, 350);
+}
+function saveGoalAdd(){
+  const g = goalSheet, v = parseAmount($('#g-add')?.value); if(!(v > 0)){ toast('Indique le montant versé'); return; }
+  const saved = Math.round(((+g.saved || 0) + v) * 100) / 100, done = saved >= +g.target - 0.005;
+  const { adding, ...clean } = g; closeSheet(); goalSheet = null;
+  Store.saveGoal({ ...clean, saved, done });
+  if(done && !g.done) setTimeout(() => jetPanel('fete', 'Objectif atteint !', `« ${esc(g.label)} » : ${eur(+g.target, 0)} mis de côté. Mission accomplie, bravo !`, 'Merci Jet'), 300);
+  else toast(`${eur(v, 0)} versés · encore ${eur(Math.max(0, +g.target - saved), 0)}`);
+}
+
 /* ================= pot commun ================= */
 const SPLIT_MODES = { equal:'À parts égales', income:'Selon les revenus', custom:'Personnalisé' };
 /** Montant mensuel d'une ligne, part privée seulement (le pro ne passe pas par le compte commun). */
@@ -2093,7 +2192,7 @@ function jetTip(T, up){
 }
 /** Grand panneau de l'assistant (présentation, célébration). */
 function jetPanel(pose, title, text, cta, act = 'close', extra = ''){
-  sheet = null; catSheet = null; tplSheet = null; splitSheet = null;
+  sheet = null; catSheet = null; tplSheet = null; splitSheet = null; goalSheet = null; paySheet = null;
   showPanel(`<div class="sheet-h"><div class="grab"></div></div>
     <div class="sheet-b jet-panel">${jet(pose, 190, 'in')}
       <h2 class="jet-title">${title}</h2><p class="jet-text" id="jet-text">${text}</p>
@@ -2659,6 +2758,7 @@ document.addEventListener('click', async e => {
   if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
+  if(d.gicon && goalSheet){ goalSheet.label = $('#g-label')?.value ?? goalSheet.label; goalSheet.targetStr = $('#g-target')?.value ?? goalSheet.targetStr; goalSheet.savedStr = $('#g-saved')?.value ?? goalSheet.savedStr; goalSheet.date = $('#g-date')?.value ?? goalSheet.date; goalSheet.icon = d.gicon; renderGoal(); return; }
   if(d.split && splitSheet){ splitSheet.mode = d.split; renderSplit(); return; }
   if(d.tset && tplSheet){ const [k, v] = d.tset.split(':'); tplSheet.w[k] = k === 'home' ? v : +v; renderTpl(); return; }
   if(d.tkids && tplSheet){ tplSheet.w.kids = Math.max(0, Math.min(6, tplSheet.w.kids + +d.tkids)); renderTpl(); return; }
@@ -2733,6 +2833,14 @@ document.addEventListener('click', async e => {
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
     case 'split-open': openSplit(); return;
+    case 'goal-new': openGoal(); return;
+    case 'goal-edit': openGoal(d.g); return;
+    case 'goal-save': return saveGoalSheet();
+    case 'goal-add': openGoalAdd(d.g); return;
+    case 'goal-add-save': return saveGoalAdd();
+    case 'goal-del': goalSheet.label = $('#g-label')?.value ?? goalSheet.label; goalSheet.targetStr = $('#g-target')?.value ?? goalSheet.targetStr; goalSheet.savedStr = $('#g-saved')?.value ?? goalSheet.savedStr; goalSheet.date = $('#g-date')?.value ?? goalSheet.date; goalSheet.confirm = true; return renderGoal();
+    case 'goal-del-no': goalSheet.confirm = false; return renderGoal();
+    case 'goal-del-yes': { const id = goalSheet.id; closeSheet(); goalSheet = null; Store.removeGoal(id); toast('Objectif supprimé'); return; }
     case 'tip-off': { const o = ls.get('bf.tipsOff', {}) || {}; o[d.tip] = true; ls.set('bf.tipsOff', o); return render(); }
     case 'pay': return togglePay(d.pl, d.pd, +d.pp);
     case 'pay-save': { const v = parseAmount($('#pay-amt')?.value); if(!(v >= 0)){ toast('Indique le montant réel'); return; } const ps = paySheet; closeSheet(); paySheet = null; savePay(ps.l, ps.d, ps.pi, v); return; }
@@ -2797,6 +2905,9 @@ document.addEventListener('input', e => {
   const r = tplRows().find(x => x.id === id), m = document.querySelector(`[data-tm="${id}"]`); if(r && m) m.textContent = `≈ ${eur(tplMonthly(r),0)}/mois`;
   $('#tpl-sum').innerHTML = tplSumHTML();
 });
+document.addEventListener('input', e => { if(['g-target','g-saved','g-date'].includes(e.target.id)) goalHint(); });
+document.addEventListener('change', e => { if(e.target.id === 'g-date') goalHint(); });
+document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'g-add'){ e.preventDefault(); saveGoalAdd(); } });
 document.addEventListener('input', e => { const u = e.target.dataset && e.target.dataset.spu; if(!u || !splitSheet) return;
   splitSheet.shares[u] = e.target.value; const t = sum(people(), x => +splitSheet.shares[x] || 0), el = $('#sp-tot');
   if(el){ el.textContent = `Total : ${t} %${t===100 ? '' : ' (les parts seront ramenées à 100 %)'}`; el.style.color = t===100 ? 'var(--fg2)' : 'var(--orange)'; } });
