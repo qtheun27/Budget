@@ -2,7 +2,7 @@
 // - Page : réseau d'abord (mises à jour immédiates), cache en secours hors ligne.
 // - Fichiers de l'appli et SDK Firebase (versions figées, immuables) : cache d'abord.
 // - Les échanges avec Firebase (Auth, Firestore) ne sont jamais interceptés : le SDK gère lui-même le hors ligne.
-const CACHE = 'budget-foyer-v5';
+const CACHE = 'budget-foyer-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/apple-touch-icon.png'];
 const FIREBASE_SDK = /^https:\/\/www\.gstatic\.com\/firebasejs\/\d+\.\d+\.\d+\//;
 

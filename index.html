@@ -880,7 +880,7 @@ let F = null;    // Firebase { app, auth, db, A, S } (appli installée)
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
 const FB_VERSION = '10.14.1';
 /** Horodatage de la version, inscrit par build.sh (0 dans l'aperçu). */
-const BUILD = +'1794477407' || 0;
+const BUILD = +'1794477910' || 0;
 /** Console d'administration : réservée à cette adresse, vérifiée aussi par les règles du serveur. */
 const ADMIN_EMAIL = 'q.theuninck@gmail.com';
 const isAdmin = () => !!(F && state.user && state.user.email === ADMIN_EMAIL);
@@ -1852,7 +1852,7 @@ function maybeJetIntro(){
   ls.set('bf.jetIntro', true);
   const fresh = !state.lines.some(l => !l.example);
   setTimeout(() => {
-    jetPanel('arrive', '« Mon nom est Jet. Bud Jet. »', fresh
+    jetPanel('coucou', '« Mon nom est Jet. Bud Jet. »', fresh
       ? "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. On commence par ton budget belge ? Ça prend 2 minutes."
       : "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. Je surveille tes échéances et je te préviens avant qu'elles tombent.",
       fresh ? 'Préparer mon budget' : "C'est parti", fresh ? 'be-tpl' : 'close',

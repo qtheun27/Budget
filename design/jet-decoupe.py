@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
-SRC='/tmp/claude-0/-home-user-budget/83ad18b3-79aa-508a-8ca8-42c0d62ae3b2/images/19.jpg'
-OUT='/home/user/budget/assets/jet/'
+SRC='design/jet-source.jpg'   # planche 2 colonnes × 3 rangées
+OUT='assets/jet/'
 im=Image.open(SRC).convert('RGB'); a=np.asarray(im).astype(np.int16)
 lum=a.mean(2); sat=a.max(2)-a.min(2); H,W=lum.shape
 def flood(mask, seeds):
@@ -11,10 +11,10 @@ def flood(mask, seeds):
     return np.asarray(m)==128
 seeds=[(0,0),(W-1,0),(0,H-1),(W-1,H-1),(W//2,0),(W//2,H-1),(0,H//2),(W-1,H//2)]
 bg=flood((lum>=247)&(sat<=10), seeds)          # fond pur (la feuille du dossier est ~239 : protégée)
-boxes={'bravo':(60,80,680,720),'reflechit':(900,80,1380,720),'alerte':(520,700,1010,1310),'fete':(100,1190,700,1960),'arrive':(800,1315,1400,1940)}
+boxes={'bravo':(0,60,671,648),'reflechit':(671,60,1342,648),'alerte':(0,648,671,1338),'fete':(671,648,1342,1338),'arrive':(0,1338,671,2000),'coucou':(671,1338,1342,2000)}
 for n,(x0,y0,x1,y1) in boxes.items():
     sub_bg=bg[y0:y1,x0:x1].copy(); L=lum[y0:y1,x0:x1]; S=sat[y0:y1,x0:x1]
-    if n=='fete': sub_bg[0:125, 520:]=True     # pieds du personnage voisin
+
     fg=~sub_bg; ys,xs=np.where(fg); bottom=ys.max(); top=ys.min()
     # ombres au sol : gris clair sous les pieds, reliés au fond
     zone=np.zeros_like(fg); zone[int(bottom-(bottom-top)*0.16):,:]=True
@@ -36,10 +36,10 @@ for n,(x0,y0,x1,y1) in boxes.items():
     pad=10; c=c.crop((max(0,xx.min()-pad),max(0,yy.min()-pad),min(c.width,xx.max()+pad),min(c.height,yy.max()+pad)))
     s=max(c.width,c.height); sq=Image.new('RGBA',(s,s),(0,0,0,0)); sq.paste(c,((s-c.width)//2,s-c.height))
     sq.resize((512,512),Image.LANCZOS).save(OUT+n+'.png',optimize=True); print(n,c.size)
-names=['arrive','bravo','reflechit','alerte','fete']
-sheet=Image.new('RGBA',(5*260,2*260),(0,0,0,255))
+names=['coucou','arrive','bravo','reflechit','alerte','fete']
+sheet=Image.new('RGBA',(6*260,2*260),(0,0,0,255))
 for i,n in enumerate(names):
     j=Image.open(OUT+n+'.png').resize((250,250))
     for k,col in enumerate([(242,242,247,255),(28,28,30,255)]):
         t=Image.new('RGBA',(260,260),col); t.alpha_composite(j,(5,5)); sheet.paste(t,(i*260,k*260))
-sheet.save('/tmp/claude-0/-home-user-budget/83ad18b3-79aa-508a-8ca8-42c0d62ae3b2/scratchpad/jet-check.png')
+sheet.save('/tmp/jet-check.png')

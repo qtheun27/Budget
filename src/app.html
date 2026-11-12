@@ -1834,7 +1834,7 @@ function maybeJetIntro(){
   ls.set('bf.jetIntro', true);
   const fresh = !state.lines.some(l => !l.example);
   setTimeout(() => {
-    jetPanel('arrive', '« Mon nom est Jet. Bud Jet. »', fresh
+    jetPanel('coucou', '« Mon nom est Jet. Bud Jet. »', fresh
       ? "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. On commence par ton budget belge ? Ça prend 2 minutes."
       : "Je suis là pour vous aider à gérer vos dépenses, à deux et sans mauvaises surprises. Je surveille tes échéances et je te préviens avant qu'elles tombent.",
       fresh ? 'Préparer mon budget' : "C'est parti", fresh ? 'be-tpl' : 'close',
