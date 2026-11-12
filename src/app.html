@@ -225,6 +225,10 @@ button.row:hover{background:var(--fill2)}
 .admin-kpis .skel{height:92px}
 .kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
 .inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.pot-rows{display:flex;flex-direction:column;gap:10px}
+.pot-row{display:flex;align-items:center;gap:12px}
+.pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
+.pot-amt{font-weight:700;font-size:18px}
 .jet{display:block;object-fit:contain;flex:none;user-select:none;-webkit-user-select:none;pointer-events:none}
 .jet-float{animation:jetFloat 3.2s ease-in-out infinite}
 .jet-in{animation:jetIn .7s cubic-bezier(.2,1.4,.4,1) both, jetFloat 3.2s ease-in-out .7s infinite}
@@ -851,7 +855,7 @@ const ls = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null? d
 const state = {
   period: PERIODS[ls.get('bf.period','month')] ? ls.get('bf.period','month') : 'month',
   scope: ['all','private','pro'].includes(ls.get('bf.scope','all')) ? ls.get('bf.scope','all') : 'all',
-  who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null, support: null, supportList: [], chat: { uid:null, msgs:[], draft:'', topic:'' },
+  who: String(ls.get('bf.who','all') || 'all'), config: {}, admin: null, payments: {}, goals: [], support: null, supportList: [], chat: { uid:null, msgs:[], draft:'', topic:'' },
   route: 'accueil', budgetKind: 'expense', month: 0, confirmClear:false, form:{}, busy:false, user:null, hid:null,
   mode: 'loading', slow:false, lines: [], meta: {name:'Bud Jet'}
 };
@@ -1023,12 +1027,18 @@ const Store = {
     this.hUnsubs.push(S.onSnapshot(S.doc(F.db, 'households', h), snap => {
       if(!snap.exists()) return;
       const d = snap.data();
-      state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {}, memberProfiles:d.memberProfiles || {} };
+      state.meta = { name:d.name, owner:d.owner, members:d.members || [], memberEmails:d.memberEmails || {}, memberProfiles:d.memberProfiles || {}, split:d.split || null, balances:d.balances || {} };
       this.autoProfile();
       renderData();
     }, onErr));
     this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'categories'), snap => {
       catDocs = {}; snap.docs.forEach(d => { catDocs[d.id] = d.data(); }); rebuildCats(); renderData();
+    }, () => {}));
+    this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'payments'), snap => {
+      state.payments = {}; snap.docs.forEach(d => { state.payments[d.id] = { id:d.id, ...d.data() }; }); renderData();
+    }, () => {}));
+    this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'goals'), snap => {
+      state.goals = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderData();
     }, () => {}));
     this.hUnsubs.push(S.onSnapshot(S.collection(F.db, 'households', h, 'lines'), { includeMetadataChanges:true }, snap => {
       state.lines = snap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -1067,6 +1077,27 @@ const Store = {
   lineRef(id, h = state.hid){ return F.S.doc(F.db, 'households', h, 'lines', id); },
   /** Écriture Firestore : appliquée tout de suite en local (et hors ligne), confirmée en arrière-plan. */
   write(p){ p.catch(e => this.fail(e)); return true; },
+  hdoc(...path){ return F.S.doc(F.db, 'households', state.hid, ...path); },
+  /* --- paiements pointés, objectifs, partage, soldes --- */
+  savePayment(p){ const { id, ...body } = p; state.payments[id] = p; renderData();
+    if(F && state.hid) return this.write(F.S.setDoc(this.hdoc('payments', id), body));
+    ls.set('bf.payments', state.payments); return true; },
+  removePayment(id){ delete state.payments[id]; renderData();
+    if(F && state.hid) return this.write(F.S.deleteDoc(this.hdoc('payments', id)));
+    ls.set('bf.payments', state.payments); return true; },
+  saveGoal(g){ const { id, ...body } = g; body.updatedAt = Date.now(); const i = state.goals.findIndex(x => x.id === id);
+    if(i >= 0) state.goals[i] = { ...g, ...body }; else state.goals.push({ ...g, ...body }); renderData();
+    if(F && state.hid) return this.write(F.S.setDoc(this.hdoc('goals', id), body));
+    ls.set('bf.goals', state.goals); return true; },
+  removeGoal(id){ state.goals = state.goals.filter(g => g.id !== id); renderData();
+    if(F && state.hid) return this.write(F.S.deleteDoc(this.hdoc('goals', id)));
+    ls.set('bf.goals', state.goals); return true; },
+  saveSplit(split){ state.meta.split = split; render();
+    if(F && state.hid) return this.write(F.S.updateDoc(this.hdoc(), { split }));
+    ls.set('bf.meta', state.meta); return true; },
+  saveBalance(key, b){ state.meta.balances = { ...(state.meta.balances || {}), [key]: b }; render();
+    if(F && state.hid) return this.write(F.S.updateDoc(this.hdoc(), { ['balances.' + key]: b }));
+    ls.set('bf.meta', state.meta); return true; },
   clean(line){ const b = {...line}; delete b.id; if(b.freq !== 'multi') delete b.parts; if(!b.who) delete b.who; b.updatedAt = Date.now(); return b; },
 
   /* --- local (secours) --- */
@@ -1075,6 +1106,7 @@ const Store = {
     state.lines = saved ?? TEMPLATE.map(t => ({ id: uid(), saved:0, example:true, ...t }));
     state.meta = ls.get('bf.meta', state.meta);
     catDocs = ls.get('bf.cats', {}) || {}; rebuildCats();
+    state.payments = ls.get('bf.payments', {}) || {}; state.goals = ls.get('bf.goals', []) || [];
     state.mode = 'local'; render();
   },
   persistLocal(){ ls.set('bf.lines', state.lines); },
@@ -1408,6 +1440,7 @@ function viewHome(){
         <div class="kpi"><div class="kpi-l">${isPro?'Frais pro':'Dépenses'}</div><div class="kpi-v num">${eur(isPro ? T.spend + T.savings : T.spend,0)}</div></div>
         <div class="kpi"><div class="kpi-l">${isPro?'Marge':'Taux d\'épargne'}</div><div class="kpi-v num">${Math.round((isPro ? (T.income ? T.free/T.income : 0) : T.rate)*100)}&nbsp;%</div></div>
       </div>
+      ${whoNow()==='all' || whoNow()==='common' ? potCard() : ''}
       ${PT ? `<section class="card pro-card"><div class="card-h"><h2>Activité complémentaire</h2><button class="link" data-scope="pro">Vue pro</button></div>
         <div class="kpis${anim}">
           <div class="kpi"><div class="kpi-l">Revenus pro</div><div class="kpi-v num" style="color:var(--green)">${eur(PT.income,0)}</div></div>
@@ -1805,6 +1838,52 @@ function viewFoyer(){
   </div>`;
 }
 
+/* ================= pot commun ================= */
+const SPLIT_MODES = { equal:'À parts égales', income:'Selon les revenus', custom:'Personnalisé' };
+/** Montant mensuel d'une ligne, part privée seulement (le pro ne passe pas par le compte commun). */
+const privMonthly = l => isActive(l) ? yearlyRaw(l) * (1 - proPart(l)) / 12 : 0;
+function potCommun(){
+  const P = people(); if(P.length < 2) return null;
+  const sp = state.meta.split || { mode:'equal' }, mode = SPLIT_MODES[sp.mode] ? sp.mode : 'equal';
+  const common = state.lines.filter(l => !whoOf(l));
+  const out = sum(common.filter(l => l.kind === 'expense'), privMonthly), inn = sum(common.filter(l => l.kind === 'income'), privMonthly);
+  const need = Math.max(0, out - inn);
+  const inc = Object.fromEntries(P.map(u => [u, sum(state.lines.filter(l => whoOf(l) === u && l.kind === 'income'), privMonthly)]));
+  const persOut = Object.fromEntries(P.map(u => [u, sum(state.lines.filter(l => whoOf(l) === u && l.kind === 'expense'), privMonthly)]));
+  const totInc = sum(P, u => inc[u]);
+  let w;
+  if(mode === 'income' && totInc > 0) w = Object.fromEntries(P.map(u => [u, inc[u] / totInc]));
+  else if(mode === 'custom'){ const sh = sp.shares || {}, t = sum(P, u => +sh[u] || 0); w = Object.fromEntries(P.map(u => [u, t ? (+sh[u] || 0) / t : 1 / P.length])); }
+  else w = Object.fromEntries(P.map(u => [u, 1 / P.length]));
+  const rows = P.map(u => ({ uid:u, pct:w[u], amount: need * w[u], income: inc[u], left: inc[u] - persOut[u] - need * w[u] }));
+  return { mode, need, out, inn, rows, noIncome: mode === 'income' && totInc <= 0 };
+}
+function potCard(){
+  const pc = potCommun(); if(!pc || !(pc.out > 0)) return '';
+  return `<section class="card pot-card"><div class="card-h"><h2>Pot commun</h2><button class="link" data-act="split-open">${SPLIT_MODES[pc.mode]} ›</button></div>
+    <div class="muted small" style="margin:-4px 0 10px">Chaque mois, pour couvrir ${eur(pc.need)} de dépenses communes${pc.inn ? ` (après ${eur(pc.inn)} de rentrées communes)` : ''}&nbsp;:</div>
+    <div class="pot-rows">${pc.rows.map(r => `<div class="pot-row">${avatar(r.uid, 'sm')}<span class="grow"><b>${esc(firstName(r.uid))}</b><span class="muted small">${Math.round(r.pct*100)} %${r.income ? ` · reste perso ${eur(r.left, 0)}` : ''}</span></span><span class="num pot-amt">${eur(r.amount)}</span></div>`).join('')}</div>
+    ${pc.noIncome ? `<p class="muted small" style="margin:10px 0 0">Pour répartir selon les revenus, attribue les salaires à chacun (« Pour qui » dans la ligne). En attendant, partage à parts égales.</p>`
+      : `<p class="muted small" style="margin:10px 0 0">Astuce de Jet : programme un virement permanent de ce montant vers le compte commun, le lendemain du salaire.</p>`}
+  </section>`;
+}
+let splitSheet = null;
+function openSplit(){
+  const sp = state.meta.split || { mode:'equal' }, P = people();
+  splitSheet = { mode: sp.mode || 'equal', shares: Object.fromEntries(P.map(u => [u, Math.round(+((sp.shares||{})[u]) || 100 / P.length)])) };
+  sheet = null; catSheet = null; tplSheet = null; renderSplit();
+}
+function renderSplit(){
+  const s = splitSheet, P = people(), keys = Object.keys(SPLIT_MODES), i = keys.indexOf(s.mode), tot = sum(P, u => +s.shares[u] || 0);
+  showPanel(`<div class="sheet-h"><div class="grab"></div><div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">Pot commun</h3><button class="r" data-act="split-save">OK</button></div></div>
+  <div class="sheet-b">
+    <div class="seg" role="group" aria-label="Répartition"><span class="seg-ind" style="width:calc((100% - 4px)/3);transform:translateX(${i*100}%)"></span>${keys.map(k => `<button data-split="${k}" aria-pressed="${s.mode===k}">${k==='equal'?'Égal':k==='income'?'Revenus':'Perso'}</button>`).join('')}</div>
+    <p class="hint">${s.mode==='equal' ? 'Chacun verse la même somme sur le compte commun.' : s.mode==='income' ? 'Chacun verse en proportion de ses revenus personnels (salaires attribués à chacun) : celui qui gagne plus met plus, chacun garde la même part de ses revenus.' : 'Choisis la part de chacun.'}</p>
+    ${s.mode==='custom' ? `<div class="field">${P.map(u => `<div class="frow"><span>${esc(firstName(u))}</span><input id="sp-${u}" data-spu="${u}" inputmode="numeric" value="${s.shares[u]}" aria-label="Part de ${esc(firstName(u))} en pourcentage"><span style="min-width:0">%</span></div>`).join('')}</div>
+      <p class="hint" id="sp-tot" style="color:${tot===100?'var(--fg2)':'var(--orange)'}">Total : ${tot} %${tot===100?'':' (les parts seront ramenées à 100 %)'}</p>` : ''}
+  </div>`);
+}
+
 /* ================= Bud Jet, l'assistant ================= */
 /** Image de l'assistant. pose : arrive | bravo | reflechit | alerte | fete ; anim : 'in' (entrée), 'float' (flotte) */
 const jet = (pose, size = 72, anim = 'float') => `<img class="jet jet-${anim}" src="assets/jet/${pose}.webp" width="${size}" height="${size}" alt="Bud Jet" decoding="async" draggable="false">`;
@@ -1822,7 +1901,7 @@ function jetTip(T, up){
 }
 /** Grand panneau de l'assistant (présentation, célébration). */
 function jetPanel(pose, title, text, cta, act = 'close', extra = ''){
-  sheet = null; catSheet = null; tplSheet = null;
+  sheet = null; catSheet = null; tplSheet = null; splitSheet = null;
   showPanel(`<div class="sheet-h"><div class="grab"></div></div>
     <div class="sheet-b jet-panel">${jet(pose, 190, 'in')}
       <h2 class="jet-title">${title}</h2><p class="jet-text" id="jet-text">${text}</p>
@@ -2387,6 +2466,7 @@ document.addEventListener('click', async e => {
   if(d.who){ state.who = d.who; ls.set('bf.who', d.who); return render(); }
   if(d.kind && !d.act){ state.budgetKind = d.kind; return render(); }
   if(d.month){ state.month = +d.month; return render(); }
+  if(d.split && splitSheet){ splitSheet.mode = d.split; renderSplit(); return; }
   if(d.tset && tplSheet){ const [k, v] = d.tset.split(':'); tplSheet.w[k] = k === 'home' ? v : +v; renderTpl(); return; }
   if(d.tkids && tplSheet){ tplSheet.w.kids = Math.max(0, Math.min(6, tplSheet.w.kids + +d.tkids)); renderTpl(); return; }
   if(d.ttog && tplSheet){ const r = tplRows().find(x => x.id === d.ttog); if(!r) return; tplSheet.edits[r.id] = { ...(tplSheet.edits[r.id]||{}), on: !r.on }; renderTpl(); return; }
@@ -2459,6 +2539,9 @@ document.addEventListener('click', async e => {
     case 'admin-refresh': loadAdmin(); return;
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
+    case 'split-open': openSplit(); return;
+    case 'split-save': { const s = splitSheet; const v = { mode: s.mode }; if(s.mode === 'custom') v.shares = Object.fromEntries(Object.entries(s.shares).map(([k, x]) => [k, Math.max(0, Math.min(100, Math.round(+x || 0)))]));
+      closeSheet(); splitSheet = null; Store.saveSplit(v); toast('Répartition enregistrée'); return; }
     case 'tpl-create': return createFromTpl();
     case 'chat-status': { const uid = state.chat.uid, t = state.supportList.find(x => x.uid===uid); if(!t) return;
       await Store.setSupportStatus(uid, t.status==='resolved' ? 'open' : 'resolved'); toast(t.status==='resolved' ? 'Conversation rouverte' : 'Marquée comme résolue'); return; }
@@ -2513,6 +2596,9 @@ document.addEventListener('input', e => {
   const r = tplRows().find(x => x.id === id), m = document.querySelector(`[data-tm="${id}"]`); if(r && m) m.textContent = `≈ ${eur(tplMonthly(r),0)}/mois`;
   $('#tpl-sum').innerHTML = tplSumHTML();
 });
+document.addEventListener('input', e => { const u = e.target.dataset && e.target.dataset.spu; if(!u || !splitSheet) return;
+  splitSheet.shares[u] = e.target.value; const t = sum(people(), x => +splitSheet.shares[x] || 0), el = $('#sp-tot');
+  if(el){ el.textContent = `Total : ${t} %${t===100 ? '' : ' (les parts seront ramenées à 100 %)'}`; el.style.color = t===100 ? 'var(--fg2)' : 'var(--orange)'; } });
 document.addEventListener('change', e => {
   if(!tplSheet) return;
   if(e.target.id === 't-side'){ tplSheet.w.side = e.target.checked; renderTpl(); }

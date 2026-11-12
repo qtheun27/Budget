@@ -307,3 +307,30 @@ test("messages : texte borné, non modifiables, fil obligatoire", async () => {
   await assertFails(deleteDoc(m.ref));
   await assertFails(updateDoc(doc(as('A'), 'support/A'), { status: 'resolved' }));   // seul l'administrateur classe
 });
+
+/* ---------- pot commun, soldes, paiements, objectifs ---------- */
+test('un membre règle le partage et les soldes ; un étranger non', async () => {
+  await assertSucceeds(updateDoc(doc(as('A'), 'households/h1'), { split: { mode: 'income' } }));
+  await assertSucceeds(updateDoc(doc(as('A'), 'households/h1'), { split: { mode: 'custom', shares: { A: 60, B: 40 } } }));
+  await assertSucceeds(updateDoc(doc(as('A'), 'households/h1'), { balances: { all: { amount: 1250.5, date: '2026-11-12', at: 1 } } }));
+  await assertFails(updateDoc(doc(as('A'), 'households/h1'), { split: { mode: 'moitie' } }));
+  await assertFails(updateDoc(doc(as('A'), 'households/h1'), { split: { mode: 'equal' }, owner: 'A2' }));
+  await assertFails(updateDoc(doc(as('Q'), 'households/h1'), { split: { mode: 'equal' } }));
+});
+test('paiements pointés : membre seulement, montant valide, signé par soi', async () => {
+  const pay = { line: 'l1', date: '2027-03-01', amount: 890, by: 'A', at: 1 };
+  await assertSucceeds(setDoc(doc(as('A'), 'households/h1/payments/l1_2027-03-01'), pay));
+  await assertSucceeds(setDoc(doc(as('A'), 'households/h1/payments/l2_2027-03-07_0'), { ...pay, line: 'l2', date: '2027-03-07', part: 0 }));
+  await assertSucceeds(deleteDoc(doc(as('A'), 'households/h1/payments/l1_2027-03-01')));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/payments/x'), { ...pay, by: 'B' }));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/payments/y'), { ...pay, amount: -3 }));
+  await assertFails(setDoc(doc(as('Q'), 'households/h1/payments/z'), { ...pay, by: 'Q' }));
+});
+test("objectifs d'épargne : membre seulement, valeurs bornées", async () => {
+  const g = { label: 'Vacances en Italie', target: 2500, saved: 300, date: '2027-07-01', icon: 'plane', createdAt: 1 };
+  await assertSucceeds(setDoc(doc(as('A'), 'households/h1/goals/g1'), g));
+  await assertSucceeds(updateDoc(doc(as('A'), 'households/h1/goals/g1'), { saved: 2500, done: true, updatedAt: 2 }));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/goals/g2'), { ...g, target: 0 }));
+  await assertFails(setDoc(doc(as('A'), 'households/h1/goals/g3'), { ...g, hack: 1 }));
+  await assertFails(setDoc(doc(as('Q'), 'households/h1/goals/g4'), g));
+});

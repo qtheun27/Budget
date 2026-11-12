@@ -3,6 +3,9 @@ rules_version = '2';
 // Budget du Foyer — règles Firestore
 //
 // households/{hid}             foyer : name, owner, members[], memberEmails{uid: email}, memberProfiles{uid: {name, photo}}, createdAt
+// households/{hid}             (+ split : partage du pot commun, balances : soldes de compte saisis)
+// households/{hid}/payments/{id} échéances marquées payées (montant réel)
+// households/{hid}/goals/{id}  objectifs d'épargne
 // households/{hid}/lines/{id}  lignes de budget (who : membre concerné, absent = commun)
 // users/{uid}                  { householdId, notify } : le foyer de chaque compte et ses réglages de rappels
 // users/{uid}/devices/{id}     appareils abonnés aux notifications (Web Push)
@@ -73,7 +76,25 @@ service cloud.firestore {
         && (('memberProfiles' in resource.data) || request.resource.data.memberProfiles.keys().hasOnly([me()]))
         && validProfile(request.resource.data.memberProfiles[me()]);
 
+      // Un membre règle le partage du pot commun ou met à jour un solde de compte.
+      allow update: if isMember(hid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['split', 'balances'])
+        && (!('split' in request.resource.data) || validSplit(request.resource.data.split))
+        && (!('balances' in request.resource.data) || (request.resource.data.balances is map && request.resource.data.balances.size() <= 8));
+
       allow delete: if false;
+
+      // ---------- paiements pointés (« Payé ») ----------
+      match /payments/{pid} {
+        allow read, delete: if isMember(hid);
+        allow create, update: if isMember(hid) && validPayment(request.resource.data);
+      }
+
+      // ---------- objectifs d'épargne ----------
+      match /goals/{gid} {
+        allow read, delete: if isMember(hid);
+        allow create, update: if isMember(hid) && validGoal(request.resource.data);
+      }
 
       // ---------- catégories du foyer (fournies modifiées ou créées) ----------
       match /categories/{catId} {
@@ -104,6 +125,34 @@ service cloud.firestore {
         && (!('name' in p) || (p.name is string && p.name.size() <= 40))
         && (!('photo' in p) || (p.photo is string && p.photo.size() <= 80000
             && (p.photo.matches('^data:image/(jpeg|png|webp);base64,.*') || p.photo.matches('^https://.*'))));
+    }
+
+    function validSplit(sp) {
+      return sp is map && sp.keys().hasOnly(['mode', 'shares'])
+        && sp.mode in ['equal', 'income', 'custom']
+        && (!('shares' in sp) || (sp.shares is map && sp.shares.size() <= 6));
+    }
+
+    function validPayment(p) {
+      return p.keys().hasOnly(['line', 'date', 'amount', 'part', 'by', 'at'])
+        && p.line is string && p.line.size() > 0 && p.line.size() <= 60
+        && p.date is string && p.date.size() == 10
+        && (p.amount is int || p.amount is float) && p.amount >= 0 && p.amount < 10000000
+        && (!('part' in p) || (p.part is int && p.part >= 0 && p.part < 12))
+        && p.by == me()
+        && (p.at is int || p.at is float);
+    }
+
+    function validGoal(g) {
+      return g.keys().hasOnly(['label', 'target', 'saved', 'date', 'icon', 'done', 'createdAt', 'updatedAt'])
+        && g.label is string && g.label.size() > 0 && g.label.size() <= 40
+        && (g.target is int || g.target is float) && g.target > 0 && g.target < 100000000
+        && (!('saved' in g) || ((g.saved is int || g.saved is float) && g.saved >= 0 && g.saved < 100000000))
+        && (!('date' in g) || (g.date is string && g.date.size() <= 10))
+        && (!('icon' in g) || (g.icon is string && g.icon.size() <= 20))
+        && (!('done' in g) || g.done is bool)
+        && (!('createdAt' in g) || g.createdAt is int || g.createdAt is float)
+        && (!('updatedAt' in g) || g.updatedAt is int || g.updatedAt is float);
     }
 
     function validCat(c) {
