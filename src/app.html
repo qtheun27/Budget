@@ -246,6 +246,12 @@ button.row:hover{background:var(--fill2)}
 .bal-form .amount{flex:1;min-width:0}
 .small-amt input{font-size:28px!important}
 .fc-card{margin-bottom:14px}
+.jet-card{position:relative}
+.tip-x{position:absolute;top:8px;right:8px;width:28px;height:28px}
+.tip-x svg{width:14px;height:14px}
+.jet-card .grow{padding-right:22px}
+.pro-aside{display:flex;gap:10px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--fill2)}
+.pro-aside>div{display:flex;flex-direction:column;min-width:0}
 .pot-rows{display:flex;flex-direction:column;gap:10px}
 .pot-row{display:flex;align-items:center;gap:12px}
 .pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -1467,7 +1473,8 @@ function viewHome(){
           <div class="kpi"><div class="kpi-l">Revenus pro</div><div class="kpi-v num" style="color:var(--green)">${eur(PT.income,0)}</div></div>
           <div class="kpi"><div class="kpi-l">Frais pro</div><div class="kpi-v num">${eur(PT.spend + PT.savings,0)}</div></div>
           <div class="kpi"><div class="kpi-l">Résultat</div><div class="kpi-v num" style="color:${PT.free<0?'var(--red)':'var(--fg)'}">${eur(PT.free,0)}</div></div>
-        </div><p class="muted small" style="margin:10px 0 0">${P_.noun[0].toUpperCase()+P_.noun.slice(1)}, part professionnelle des lignes mixtes comprise. Pense à provisionner tes cotisations sociales et ton impôt.</p></section>` : ''}
+        </div>${(() => { const ps = proSetAside(); return ps ? `<div class="pro-aside">${jet('reflechit', 44)}<div><b class="num">≈ ${eur(ps.monthly, 0)} / mois à mettre de côté</b><span class="muted small">${ps.hasCotis ? "Impôt estimé à 40 % du résultat (tes cotisations sont déjà dans tes frais)." : 'Cotisations sociales ≈ 20,5 % du résultat, puis impôt estimé à 40 %.'} Estimation indicative.</span></div></div>` : ''; })()}
+        <p class="muted small" style="margin:10px 0 0">${P_.noun[0].toUpperCase()+P_.noun.slice(1)}, part professionnelle des lignes mixtes comprise.</p></section>` : ''}
       ${provLines.length ? `<a class="card save-card press" href="#provisions">
         <span class="save-ic">${ic('jar')}</span>
         <span class="grow"><span class="muted small">À mettre de côté ce mois-ci</span><br><strong class="num">${eur(provMonth)}</strong>
@@ -2005,18 +2012,66 @@ function renderSplit(){
 /** Image de l'assistant. pose : arrive | bravo | reflechit | alerte | fete ; anim : 'in' (entrée), 'float' (flotte) */
 const jet = (pose, size = 72, anim = 'float') => `<img class="jet jet-${anim}" src="assets/jet/${pose}.webp" width="${size}" height="${size}" alt="Bud Jet" decoding="async" draggable="false">`;
 /** Conseil du jour sur l'accueil, selon la situation du budget. */
+/* ---------- Jet, conseiller belge ---------- */
+const lineHas = (l, kws) => { const n = norm(l.label); return kws.some(k => n.includes(k)); };
+const extLink = (href, label) => `<a class="link" href="${href}" target="_blank" rel="noopener">${label} ↗</a>`;
+/** Estimation de ce qu'un indépendant complémentaire devrait mettre de côté chaque mois (indicatif). */
+function proSetAside(){
+  const pro = state.lines.filter(l => isActive(l) && proPart(l) > 0), P = l => yearlyRaw(l) * proPart(l);
+  const R = sum(pro.filter(l => l.kind === 'income'), P) - sum(pro.filter(l => l.kind === 'expense'), P);
+  if(!(R > 0)) return null;
+  const hasCotis = pro.some(l => l.kind === 'expense' && lineHas(l, ['cotisation', 'caisse sociale', 'xerius', 'partena', 'liantis', 'acerta', 'ucm', 'securex']));
+  const cot = hasCotis ? 0 : R * 0.205, tax = (R - cot) * 0.40;
+  return { R, cot, tax, monthly: (cot + tax) / 12, hasCotis };
+}
+/** Conseils de saison et d'échéance de contrat, à partir du budget. */
+function jetAdvice(){
+  const t = today0(), y = t.getFullYear(), mo = t.getMonth(), half = `${y}-${mo < 6 ? 1 : 2}`, out = [], act = state.lines.filter(l => isActive(l) && whoMatch(l));
+  // Déclaration fiscale : de mai à mi-juillet
+  if(mo >= 4 && (mo < 6 || (mo === 6 && t.getDate() <= 15))){
+    const found = [];
+    if(act.some(l => lineHas(l, ['epargne-pension', 'epargne pension']))) found.push('ton épargne-pension');
+    if(act.some(l => lineHas(l, ['titre-service', 'titres-services', 'titres services', 'titre service']))) found.push('tes titres-services');
+    if(act.some(l => lineHas(l, ['creche', 'garderie', 'accueillante', "garde d'enfant", 'garde enfant']))) found.push("tes frais de garde d'enfants");
+    if(act.some(l => lineHas(l, ['don ', 'dons', 'unicef', 'croix-rouge', 'croix rouge']))) found.push('tes dons (à partir de 40 €)');
+    out.push({ id:`impots-${y}`, pose:'reflechit', title:'Saison de la déclaration fiscale',
+      text: found.length ? `Sur Tax-on-web, vérifie que ces réductions d'impôt sont bien reprises : ${found.join(', ')}.` : "Sur Tax-on-web, pense aux réductions d'impôt : épargne-pension, titres-services, frais de garde d'enfants, dons.",
+      link: extLink('https://eservices.minfin.fgov.be/myminfin-web/', 'MyMinfin') });
+  }
+  // Assurances annuelles : résiliation au moins 3 mois avant l'échéance
+  act.filter(l => l.kind === 'expense' && l.cat === 'assurances' && l.freq === 'annual').forEach(l => {
+    const d = nextDue(l); if(!d) return; const n = daysBetween(t, d); if(n < 95 || n > 125) return;
+    const lim = addMonths(d, -3);
+    out.push({ id:`preavis-${l.id}-${iso(d)}`, pose:'alerte', title:`${esc(l.label)} : c'est le moment de comparer`,
+      text:`Elle se renouvelle le ${dueText(d).replace(/\.$/, '')}. Pour en changer, il faut résilier au moins 3 mois avant, donc au plus tard le ${dueText(lim).replace(/\.$/, '')}.`, link:'' });
+  });
+  // Énergie : comparer deux fois par an (changer de fournisseur est gratuit)
+  if(act.some(l => l.kind === 'expense' && (l.cat === 'energie' && lineHas(l, ['electri', 'gaz', 'energie', 'engie', 'luminus', 'totalenergies', 'mega']))))
+    out.push({ id:`energie-${half}`, pose:'reflechit', title:"Ton contrat d'énergie est-il le bon ?", text:"Changer de fournisseur d'électricité ou de gaz est gratuit et sans préavis long. Compare sur le simulateur officiel de la CREG.", link: extLink('https://www.creg.be', 'creg.be') });
+  // Télécom : changement sans frais après 6 mois de contrat
+  const tel = act.filter(l => l.kind === 'expense' && l.cat === 'abonnements' && lineHas(l, ['internet', 'gsm', 'proximus', 'telenet', 'orange', 'voo', 'scarlet', 'mobile', 'base']));
+  if(sum(tel, l => yearlyRaw(l) / 12) >= 50)
+    out.push({ id:`telecom-${half}`, pose:'reflechit', title:'Internet et GSM : un pack moins cher ?', text:"Après 6 mois de contrat, tu peux changer d'opérateur sans frais. Le comparateur officiel du régulateur (IBPT) t'aide à trouver l'offre la moins chère.", link: extLink('https://www.meilleurtarif.be', 'meilleurtarif.be') });
+  // Indépendant complémentaire
+  const ps = proSetAside();
+  if(ps) out.push({ id:`pro-${y}-${Math.floor(mo / 3)}`, pose:'reflechit', title:'Activité complémentaire : mets de côté',
+    text:`Estimation : environ ${eur(ps.monthly, 0)} par mois pour ${ps.hasCotis ? "l'impôt" : "tes cotisations sociales et l'impôt"} sur un résultat de ${eur(ps.R, 0)} par an.`, link:'<a class="link" href="#provisions">Provisions</a>' });
+  const off = ls.get('bf.tipsOff', {}) || {};
+  return out.filter(a => !off[a.id]);
+}
 function jetTip(T, up){
   if(!state.lines.length) return '';
   const P_ = PERIODS[state.period], soon = up.find(u => u.l.kind === 'expense' && daysBetween(today0(), u.d) <= 7);
   const late = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l) && provisionState(l).status === 'late').length;
-  let pose, title, text, link = '';
+  let pose, title, text, link = '', adv, tipId = '';
   const fc = forecast();
   if(fc && fc.min < 0){ pose = 'alerte'; title = `Découvert en vue le ${dueText(fc.minDate)}`; text = `${balWhere()[0].toUpperCase() + balWhere().slice(1)} passerait à ${eur(fc.min, 0)}. Prévois ${eur(-fc.min + 100, 0)} de marge.`; link = '<a class="link" href="#echeancier">Voir la prévision</a>'; }
   else if(T.free < 0 && scopeNow() !== 'pro' && whoNow() !== 'common'){ pose = 'alerte'; title = 'On dépasse un peu…'; text = `Tes sorties dépassent tes rentrées de ${eur(-T.free)} ${P_.noun}. Regardons ensemble où ajuster.`; link = '<a class="link" href="#budget">Voir le budget</a>'; }
+  else if((adv = jetAdvice()[0])){ pose = adv.pose; title = adv.title; text = adv.text; link = adv.link; tipId = adv.id; }
   else if(soon){ pose = 'alerte'; title = `${esc(soon.l.label)} ${relDays(soon.d)}`; text = `${approx(soon.l)}${eur(soon.amt * shareOf(soon.l))} à prévoir sur le compte.`; link = '<a class="link" href="#echeancier">Échéancier</a>'; }
   else if(late){ pose = 'reflechit'; title = 'Petit rattrapage'; text = `${late} dépense${late>1?'s':''} irrégulière${late>1?'s':''} à mettre de côté pour être prêt à l'échéance.`; link = '<a class="link" href="#provisions">Provisions</a>'; }
   else { pose = 'bravo'; title = 'Budget sous contrôle'; text = T.free > 0 ? `Il te reste ${eur(T.free)} ${P_.noun} après tout. Bien joué !` : 'Tout est prévu, aucune mauvaise surprise en vue.'; }
-  return `<section class="card jet-card">${jet(pose, 68)}<div class="grow"><div class="jet-t">${title}</div><div class="muted small">${text}</div>${link ? `<div style="margin-top:6px">${link}</div>` : ''}</div></section>`;
+  return `<section class="card jet-card">${jet(pose, 68)}${tipId ? `<button class="mini press tip-x" data-act="tip-off" data-tip="${tipId}" aria-label="Masquer ce conseil">${ic('close')}</button>` : ''}<div class="grow"><div class="jet-t">${title}</div><div class="muted small">${text}</div>${link ? `<div style="margin-top:6px">${link}</div>` : ''}</div></section>`;
 }
 /** Grand panneau de l'assistant (présentation, célébration). */
 function jetPanel(pose, title, text, cta, act = 'close', extra = ''){
@@ -2660,6 +2715,7 @@ document.addEventListener('click', async e => {
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
     case 'split-open': openSplit(); return;
+    case 'tip-off': { const o = ls.get('bf.tipsOff', {}) || {}; o[d.tip] = true; ls.set('bf.tipsOff', o); return render(); }
     case 'pay': return togglePay(d.pl, d.pd, +d.pp);
     case 'pay-save': { const v = parseAmount($('#pay-amt')?.value); if(!(v >= 0)){ toast('Indique le montant réel'); return; } const ps = paySheet; closeSheet(); paySheet = null; savePay(ps.l, ps.d, ps.pi, v); return; }
     case 'use-avg': { if(!sheet) return; const v = +d.avg; sheet.amountStr = nf2.format(v).replace(/\u202f|\u00a0/g,' ').replace(/,00$/,''); const a = $('#f-amount'); if(a){ a.value = sheet.amountStr; a.dispatchEvent(new Event('input', { bubbles:true })); } toast('Estimation mise à jour, valide avec OK'); return; }
