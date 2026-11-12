@@ -225,6 +225,27 @@ button.row:hover{background:var(--fill2)}
 .admin-kpis .skel{height:92px}
 .kpi-s{font-size:12px;line-height:1.3;color:var(--fg2);margin-top:3px}
 .inp.area{height:auto;min-height:88px;padding:12px 14px;resize:vertical;box-shadow:none;background:var(--fill2);font:inherit;font-size:16px;line-height:1.4}
+.row-pay{grid-template-columns:auto minmax(0,1fr) auto auto}
+.pay{width:28px;height:28px;border-radius:50%;box-shadow:inset 0 0 0 1.8px var(--fg3);display:grid;place-items:center;color:transparent;flex:none;transition:background .15s,box-shadow .15s}
+.pay svg{width:15px;height:15px}
+.pay.on{background:var(--green);box-shadow:none;color:#fff}
+.fc-chart{width:100%;height:130px;display:block;overflow:visible}
+.fc-line{fill:none;stroke:var(--accent);stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.fc-line.bad{stroke:var(--red)}
+.fc-area{fill:color-mix(in srgb,var(--accent) 12%,transparent)}
+.fc-area.bad{fill:color-mix(in srgb,var(--red) 10%,transparent)}
+.fc-zero{stroke:var(--red);stroke-dasharray:4 4;stroke-width:1;vector-effect:non-scaling-stroke}
+.fc-grid{stroke:var(--sep);stroke-width:1;vector-effect:non-scaling-stroke}
+.fc-tick{font-size:9px;fill:var(--fg3)}
+.fc-min{fill:var(--accent);stroke:var(--card);stroke-width:2;vector-effect:non-scaling-stroke}
+.fc-min.bad{fill:var(--red)}.fc-min.warn{fill:var(--orange)}
+.fc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.fc-kpis div{display:flex;flex-direction:column;min-width:0}
+.fc-kpis b{font-size:17px}
+.bal-form{display:flex;gap:10px;align-items:center}
+.bal-form .amount{flex:1;min-width:0}
+.small-amt input{font-size:28px!important}
+.fc-card{margin-bottom:14px}
 .pot-rows{display:flex;flex-direction:column;gap:10px}
 .pot-row{display:flex;align-items:center;gap:12px}
 .pot-row .grow{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -1466,10 +1487,10 @@ function viewHome(){
     <div class="col">
       <section>
         <div class="card-h" style="padding:0 4px;margin:4px 0 8px"><h2>Prochaines échéances</h2><a class="link" href="#echeancier">Échéancier</a></div>
-        <div class="list">${up.length ? up.map(({l,d,amt,part})=>`<button class="row press" data-edit="${esc(l.id)}">
+        <div class="list">${up.length ? up.map(({l,d,amt,part})=>`<button class="row press row-pay" data-edit="${esc(l.id)}">
           <span class="date-chip"><b>${d.getDate()}</b><span>${MONTHS[d.getMonth()].replace('.','')}</span></span>
           <span style="min-width:0"><div class="t">${esc(l.label)}${partName(part)}${proLabel(l)}</div><div class="s">${relDays(d)} · ${l.freq==='multi' ? 'mensuel' : FREQ[l.freq].label.toLowerCase()}</div></span>
-          <span class="v num" style="color:${l.kind==='income'?'var(--green)':'var(--fg)'}">${approx(l)}${l.kind==='income'?'+':''}${eur(amt*shareOf(l))}</span></button>`).join('')
+          <span class="v num" style="color:${l.kind==='income'?'var(--green)':'var(--fg)'}">${approx(l)}${l.kind==='income'?'+':''}${eur(amt*shareOf(l))}</span>${payBtn(l, d, part)}</button>`).join('')
           : '<div class="row"><span></span><span class="muted">Ajoute une date d\'échéance à tes lignes pour les voir ici.</span><span></span></div>'}</div>
       </section>
       ${endingSoon()}
@@ -1548,11 +1569,14 @@ function viewTimeline(){
   const peaks = tl.filter(x=>x.out > avg*1.15).length;
   const diff = m.out - avg, solde = m.inc - m.out;
   const negMonths = tl.filter(x=>x.inc - x.out < 0).length;
-  const row = (i, sign) => `<button class="row press" data-edit="${esc(i.l.id)}">${i.date ? `<span class="date-chip"><b>${i.date.getDate()}</b><span>${MONTHS[i.date.getMonth()].replace('.','')}</span></span>` : tile(i.l.cat)}
+  const row = (i, sign) => `<button class="row press${i.date ? ' row-pay' : ''}" data-edit="${esc(i.l.id)}">${i.date ? `<span class="date-chip"><b>${i.date.getDate()}</b><span>${MONTHS[i.date.getMonth()].replace('.','')}</span></span>` : tile(i.l.cat)}
     <span style="min-width:0"><div class="t">${esc(i.l.label)}${partName(i.part)}${proLabel(i.l)}</div><div class="s">${i.date ? `${CATS[i.l.cat]?.label||'Divers'} · ${i.l.freq==='multi' ? 'mensuel' : FREQ[i.l.freq].label.toLowerCase()}` : `${freqText(i.l)} · réparti sur l'année`}</div></span>
-    <span class="v num" style="${sign==='+'?'color:var(--green)':''}">${approx(i.l)}${sign}${eur(i.amt)}</span></button>`;
+    <span class="v num" style="${sign==='+'?'color:var(--green)':''}">${approx(i.l)}${sign}${eur(i.amt)}</span>${i.date ? payBtn(i.l, i.date, i.part) : ''}</button>`;
+  const datedAll = [...dated, ...incs.filter(i => i.date)], paidN = datedAll.filter(i => paidOf(i.l, i.date, partIdx(i.l, i.part))).length;
+  const realDiff = sum(datedAll, i => { const p = paidOf(i.l, i.date, partIdx(i.l, i.part)); if(!p) return 0; const planned = i.part ? +i.part.amount : +i.l.amount; return (i.l.kind === 'income' ? -1 : 1) * (+p.amount - planned) * shareOf(i.l); });
   return `${header('Rentrées et sorties mois par mois', 'Échéancier', false)}
   ${filtersBlock()}
+  ${forecastCard()}
   ${state.lines.length===0 ? emptyState() : `
   <div class="grid">
     <section class="card">
@@ -1573,7 +1597,9 @@ function viewTimeline(){
           <div class="kpi"><div class="kpi-l">Sorties</div><div class="kpi-v num">${eur(m.out,0)}</div></div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <span class="pill ${diff>avg*.15?'warn':diff<-avg*.05?'good':'info'}">Sorties ${diff>=0?'+':'−'}${eur(Math.abs(diff),0)} vs moyenne</span></div>
+          <span class="pill ${diff>avg*.15?'warn':diff<-avg*.05?'good':'info'}">Sorties ${diff>=0?'+':'−'}${eur(Math.abs(diff),0)} vs moyenne</span>
+          ${datedAll.length ? `<span class="pill ${paidN === datedAll.length ? 'good' : 'info'}">${paidN}/${datedAll.length} pointées</span>` : ''}
+          ${Math.abs(realDiff) >= 1 ? `<span class="pill ${realDiff > 0 ? 'warn' : 'good'}">Réel ${realDiff > 0 ? '+' : '−'}${eur(Math.abs(realDiff), 0)} vs prévu</span>` : ''}</div>
         <p class="muted small" style="margin:14px 0 0">Montants réellement crédités et débités ce mois-là. Les dépenses courantes (courses, carburant…) et les revenus sans date sont répartis sur l'année.</p>
       </section>
       <section>
@@ -1838,6 +1864,97 @@ function viewFoyer(){
   </div>`;
 }
 
+/* ================= paiements pointés (« Payé ») ================= */
+const partIdx = (l, part) => part ? (l.parts || []).indexOf(part) : -1;
+const payId = (l, d, pi = -1) => `${l.id}_${iso(d)}${pi >= 0 ? '_' + pi : ''}`;
+const paidOf = (l, d, pi) => state.payments[payId(l, d, pi)];
+/** Bouton rond « payé » d'une échéance datée (dans une ligne cliquable : span avec data-act). */
+function payBtn(l, d, part){
+  const pi = partIdx(l, part), p = paidOf(l, d, pi), inc = l.kind === 'income';
+  return `<span class="pay${p ? ' on' : ''}" role="button" tabindex="0" data-act="pay" data-pl="${esc(l.id)}" data-pd="${iso(d)}" data-pp="${pi}" aria-pressed="${!!p}" aria-label="${inc ? 'Marquer comme reçu' : 'Marquer comme payé'}">${ic('check', 2.8)}</span>`;
+}
+let paySheet = null;
+async function togglePay(lid, ds, pi){
+  const l = state.lines.find(x => x.id === lid); if(!l) return;
+  const d = parseDate(ds), id = payId(l, d, pi);
+  if(state.payments[id]){ Store.removePayment(id); toast(l.kind === 'income' ? 'Rentrée remise en attente' : 'Paiement retiré'); return; }
+  const planned = pi >= 0 ? +((l.parts || [])[pi] || {}).amount || 0 : +l.amount || 0;
+  if(l.variable){ paySheet = { l, d, pi, planned }; sheet = null; catSheet = null; tplSheet = null;
+    showPanel(`<div class="sheet-h"><div class="grab"></div><div class="sheet-top"><button class="l" data-act="close">Annuler</button><h3 id="sheet-title">${esc(l.label)}</h3><button class="r" data-act="pay-save">OK</button></div></div>
+      <div class="sheet-b"><p class="hint" style="margin:0">Montant variable : quel est le montant réel du ${dueText(d)} ?</p>
+      <div class="amount"><input id="pay-amt" inputmode="decimal" value="${nf2.format(planned).replace(/ | /g,' ').replace(/,00$/,'')}" aria-label="Montant réel"><span>€</span></div>
+      <p class="hint">Estimation prévue : ${eur(planned)}. Les montants réels me servent à affiner ton estimation.</p></div>`);
+    setTimeout(() => { const a = $('#pay-amt'); if(a){ a.focus(); a.select(); } }, 350); return; }
+  savePay(l, d, pi, planned);
+}
+function savePay(l, d, pi, amount){
+  const p = { id: payId(l, d, pi), line: l.id, date: iso(d), amount: Math.round(amount*100)/100, by: state.user?.uid || 'local', at: Date.now() };
+  if(pi >= 0) p.part = pi;
+  Store.savePayment(p); toast(l.kind === 'income' ? 'Reçu ✓' : 'Payé ✓');
+}
+/** Moyenne des derniers montants réels d'une ligne variable (au moins 2). */
+function realAvg(lid){
+  const P = Object.values(state.payments).filter(p => p.line === lid).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 3);
+  return P.length >= 2 ? { n: P.length, avg: sum(P, p => +p.amount) / P.length } : null;
+}
+
+/* ================= solde prévisionnel ================= */
+const BAL_DAYS = 92;
+/** Jour du virement vers le compte commun : le lendemain du premier salaire attribué, sinon le 1er. */
+const transferDay = () => { const ds = state.lines.filter(l => l.kind === 'income' && whoOf(l) && !proPart(l) && validDate(l.due)).map(l => parseDate(l.due).getDate()); return ds.length ? Math.min(28, Math.min(...ds) + 1) : 1; };
+const balKey = () => whoNow();
+const balWhere = () => { const w = whoNow(); return w === 'all' ? 'ton compte' : w === 'common' ? 'le compte commun' : `le compte de ${esc(firstName(w))}`; };
+function forecast(){
+  const b = (state.meta.balances || {})[balKey()]; if(!b || !validDate(b.date) || !isFinite(+b.amount)) return null;
+  const t = today0(), start = parseDate(b.date) > t ? t : parseDate(b.date), end = new Date(t.getFullYear(), t.getMonth(), t.getDate() + BAL_DAYS);
+  const n = daysBetween(start, end), delta = new Array(n + 1).fill(0), stop = new Date(end.getTime() + 86400000);
+  state.lines.forEach(l => {
+    const f = shareOf(l); if(!f) return; const sg = l.kind === 'income' ? 1 : -1;
+    const add = (d, amt, pi) => { const i = daysBetween(start, d); if(i < 0 || i > n) return; if(i === 0 && paidOf(l, d, pi)) return; delta[i] += sg * amt * f; };
+    if(l.freq === 'multi'){ multiOccurrences(l, start, stop).forEach(o => add(o.date, o.amt, partIdx(l, o.part))); return; }
+    const occ = occurrences(l, start, stop);
+    if(occ === null){ if(!isActive(l)) return; const per = yearlyRaw(l) / 365 * f * sg; for(let i = 1; i <= n; i++) delta[i] += per; return; }
+    occ.forEach(d => add(d, +l.amount || 0, -1));
+  });
+  // Virements vers le compte commun (pot commun) : rentrée pour le compte commun, sortie pour le compte de chacun.
+  const pc = potCommun(), w = whoNow(); let transfer = null;
+  if(pc && pc.need > 0 && (w === 'common' || people().includes(w))){
+    const amt = w === 'common' ? pc.need : ((pc.rows.find(r => r.uid === w) || {}).amount || 0), sg = w === 'common' ? 1 : -1, day = transferDay();
+    transfer = { amt, day };
+    let y = start.getFullYear(), m = start.getMonth();
+    for(let k = 0; k < 6; k++){ const d = dayIn(y, m, day), i = daysBetween(start, d); if(i >= 1 && i <= n) delta[i] += sg * amt; if(++m > 11){ m = 0; y++; } }
+  }
+  const series = []; let v = +b.amount; for(let i = 0; i <= n; i++){ v += delta[i]; series.push(v); }
+  const ti = daysBetween(start, t); let mi = ti; for(let i = ti; i <= n; i++) if(series[i] < series[mi]) mi = i;
+  const dayOf = i => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+  return { transfer, b, start, series, ti, mi, min: series[mi], minDate: dayOf(mi), now: series[ti], end: series[n], dayOf, n, age: daysBetween(parseDate(b.date), t) };
+}
+function forecastCard(){
+  if(!state.lines.length) return '';
+  const fc = forecast(), key = balKey();
+  const form = (label, val) => `<div class="bal-form"><div class="amount small-amt"><input id="bal-in" inputmode="decimal" placeholder="0" value="${val}" aria-label="Solde actuel"><span>€</span></div><button class="btn primary press" data-act="bal-save">${label}</button></div>`;
+  if(!fc || state.balEdit === key) return `<section class="card fc-card"><div class="card-h"><h2>Solde prévisionnel</h2>${fc ? '<button class="link" data-act="bal-cancel">Annuler</button>' : ''}</div>
+    <p class="muted small" style="margin:-4px 0 12px">Combien y a-t-il sur ${balWhere()} aujourd'hui ? Je te montre son évolution sur 3 mois, échéance par échéance, et je te préviens avant un découvert.</p>
+    ${form(fc ? 'Mettre à jour' : 'Voir la prévision', fc ? String(Math.round(fc.now)) : '')}</section>`;
+  const W = 320, H = 120, P = 6, vals = fc.series.slice(fc.ti), lo = Math.min(0, ...vals), hi = Math.max(...vals, 1), span = (hi - lo) || 1;
+  const x = i => P + (i / (vals.length - 1)) * (W - 2*P), y = v => P + (1 - (v - lo) / span) * (H - 2*P);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const mi = fc.mi - fc.ti, neg = fc.min < 0, low = !neg && fc.min < 150;
+  const ticks = []; for(let i = 0; i < vals.length; i++){ const d = fc.dayOf(fc.ti + i); if(d.getDate() === 1) ticks.push(`<text x="${x(i)}" y="${H - 1}" class="fc-tick">${MSHORT[d.getMonth()]}</text><line x1="${x(i)}" x2="${x(i)}" y1="${P}" y2="${H - 12}" class="fc-grid"/>`); }
+  return `<section class="card fc-card"><div class="card-h"><h2>Solde prévisionnel · 3 mois</h2><button class="link" data-act="bal-edit">Mettre à jour</button></div>
+    <svg class="fc-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Évolution prévue de ${balWhere()} sur 3 mois">
+      ${ticks.join('')}${lo < 0 ? `<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="fc-zero"/>` : ''}
+      <polygon points="${x(0)},${y(lo)} ${pts} ${x(vals.length - 1)},${y(lo)}" class="fc-area${neg ? ' bad' : ''}"/>
+      <polyline points="${pts}" class="fc-line${neg ? ' bad' : ''}"/>
+      <circle cx="${x(mi)}" cy="${y(fc.min)}" r="4" class="fc-min${neg ? ' bad' : low ? ' warn' : ''}"/>
+    </svg>
+    <div class="fc-kpis"><div><span class="muted small">Aujourd'hui</span><b class="num">${eur(fc.now, 0)}</b></div>
+      <div><span class="muted small">Point bas</span><b class="num" style="color:${neg ? 'var(--red)' : low ? 'var(--orange)' : 'inherit'}">${eur(fc.min, 0)}</b><span class="muted small">le ${dueText(fc.minDate)}</span></div>
+      <div><span class="muted small">Dans 3 mois</span><b class="num">${eur(fc.end, 0)}</b></div></div>
+    <p class="muted small" style="margin:10px 0 0">${neg ? `Attention : ${balWhere()} passerait sous zéro le ${dueText(fc.minDate)}. Prévois au moins ${eur(-fc.min + 100, 0)} de marge.` : fc.age > 10 ? `Solde saisi il y a ${fc.age} jours : mets-le à jour pour une prévision précise.` : `Échéances datées à leur jour, dépenses courantes réparties au quotidien.${fc.transfer ? ` Virement ${whoNow() === 'common' ? 'des membres vers' : 'vers'} le compte commun compris : ${eur(fc.transfer.amt, 0)} le ${fc.transfer.day} du mois.` : ''}`}</p>
+  </section>`;
+}
+
 /* ================= pot commun ================= */
 const SPLIT_MODES = { equal:'À parts égales', income:'Selon les revenus', custom:'Personnalisé' };
 /** Montant mensuel d'une ligne, part privée seulement (le pro ne passe pas par le compte commun). */
@@ -1893,7 +2010,9 @@ function jetTip(T, up){
   const P_ = PERIODS[state.period], soon = up.find(u => u.l.kind === 'expense' && daysBetween(today0(), u.d) <= 7);
   const late = state.lines.filter(l => isProvision(l) && isActive(l) && whoMatch(l) && provisionState(l).status === 'late').length;
   let pose, title, text, link = '';
-  if(T.free < 0 && scopeNow() !== 'pro' && whoNow() !== 'common'){ pose = 'alerte'; title = 'On dépasse un peu…'; text = `Tes sorties dépassent tes rentrées de ${eur(-T.free)} ${P_.noun}. Regardons ensemble où ajuster.`; link = '<a class="link" href="#budget">Voir le budget</a>'; }
+  const fc = forecast();
+  if(fc && fc.min < 0){ pose = 'alerte'; title = `Découvert en vue le ${dueText(fc.minDate)}`; text = `${balWhere()[0].toUpperCase() + balWhere().slice(1)} passerait à ${eur(fc.min, 0)}. Prévois ${eur(-fc.min + 100, 0)} de marge.`; link = '<a class="link" href="#echeancier">Voir la prévision</a>'; }
+  else if(T.free < 0 && scopeNow() !== 'pro' && whoNow() !== 'common'){ pose = 'alerte'; title = 'On dépasse un peu…'; text = `Tes sorties dépassent tes rentrées de ${eur(-T.free)} ${P_.noun}. Regardons ensemble où ajuster.`; link = '<a class="link" href="#budget">Voir le budget</a>'; }
   else if(soon){ pose = 'alerte'; title = `${esc(soon.l.label)} ${relDays(soon.d)}`; text = `${approx(soon.l)}${eur(soon.amt * shareOf(soon.l))} à prévoir sur le compte.`; link = '<a class="link" href="#echeancier">Échéancier</a>'; }
   else if(late){ pose = 'reflechit'; title = 'Petit rattrapage'; text = `${late} dépense${late>1?'s':''} irrégulière${late>1?'s':''} à mettre de côté pour être prêt à l'échéance.`; link = '<a class="link" href="#provisions">Provisions</a>'; }
   else { pose = 'bravo'; title = 'Budget sous contrôle'; text = T.free > 0 ? `Il te reste ${eur(T.free)} ${P_.noun} après tout. Bien joué !` : 'Tout est prévu, aucune mauvaise surprise en vue.'; }
@@ -2274,6 +2393,7 @@ function sheetHTML(editing){
       <div class="conv" id="f-conv"></div></div>
     <div class="field"><div class="frow"><input type="text" id="f-label" placeholder="Nom (ex. Assurance auto)" value="${esc(s.label)}" autocomplete="off" aria-label="Nom" maxlength="60"></div></div>
     <div class="field"><div class="frow"><span>Montant variable</span><span class="muted small" style="flex:1;min-width:0">Estimation, affichée « ≈ »</span><label class="switch"><input type="checkbox" id="f-var" ${s.variable?'checked':''} aria-label="Montant variable"><span></span></label></div></div>
+    ${(() => { const r = !s.isNew && s.freq !== 'multi' ? realAvg(s.id) : null; return r && Math.abs(r.avg - (+s.amount || 0)) > 0.5 ? `<div class="jet-say">${jet('reflechit', 52)}<div class="jet-bubble">Tes ${r.n} derniers paiements font ${eur(r.avg)} en moyenne.<small><button class="link" data-act="use-avg" data-avg="${r.avg.toFixed(2)}">Utiliser ce montant comme estimation</button></small></div></div>` : ''; })()}
     <div><span class="flabel">Fréquence</span><div class="chips" id="f-freq">${Object.entries(FREQ).map(([k,f])=>`<button class="chip press" data-freq="${k}" aria-pressed="${s.freq===k}">${f.label}</button>`).join('')}</div></div>
     <div id="f-parts"></div>
     <div><span class="flabel">Catégorie <span class="suggest" id="f-sugg"></span></span><div class="chips" id="f-cats"></div></div>
@@ -2540,6 +2660,13 @@ document.addEventListener('click', async e => {
     case 'chat-send': return sendChat();
     case 'be-tpl': openTpl(); return;
     case 'split-open': openSplit(); return;
+    case 'pay': return togglePay(d.pl, d.pd, +d.pp);
+    case 'pay-save': { const v = parseAmount($('#pay-amt')?.value); if(!(v >= 0)){ toast('Indique le montant réel'); return; } const ps = paySheet; closeSheet(); paySheet = null; savePay(ps.l, ps.d, ps.pi, v); return; }
+    case 'use-avg': { if(!sheet) return; const v = +d.avg; sheet.amountStr = nf2.format(v).replace(/\u202f|\u00a0/g,' ').replace(/,00$/,''); const a = $('#f-amount'); if(a){ a.value = sheet.amountStr; a.dispatchEvent(new Event('input', { bubbles:true })); } toast('Estimation mise à jour, valide avec OK'); return; }
+    case 'bal-edit': state.balEdit = balKey(); render(); setTimeout(() => { const i = $('#bal-in'); if(i){ i.focus(); i.select(); } }, 30); return;
+    case 'bal-cancel': state.balEdit = null; return render();
+    case 'bal-save': { const v = parseAmount($('#bal-in')?.value); if(!isFinite(v)){ toast('Indique le solde actuel'); return; } state.balEdit = null;
+      Store.saveBalance(balKey(), { amount: Math.round(v*100)/100, date: iso(today0()), at: Date.now() }); toast('Solde enregistré'); return; }
     case 'split-save': { const s = splitSheet; const v = { mode: s.mode }; if(s.mode === 'custom') v.shares = Object.fromEntries(Object.entries(s.shares).map(([k, x]) => [k, Math.max(0, Math.min(100, Math.round(+x || 0)))]));
       closeSheet(); splitSheet = null; Store.saveSplit(v); toast('Répartition enregistrée'); return; }
     case 'tpl-create': return createFromTpl();
@@ -2605,6 +2732,7 @@ document.addEventListener('change', e => {
   if(e.target.id === 't-drop'){ tplSheet.drop = e.target.checked; }
 });
 document.addEventListener('input', e => { if(e.target.id==='chat-input'){ state.chat.draft = e.target.value; autoGrow(e.target); } });
+document.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.target.id === 'bal-in' || e.target.id === 'pay-amt')){ e.preventDefault(); document.querySelector(e.target.id === 'bal-in' ? '[data-act="bal-save"]' : '[data-act="pay-save"]')?.click(); } });
 document.addEventListener('keydown', e => { if(e.target.id==='chat-input' && e.key==='Enter' && !e.shiftKey && isDesk()){ e.preventDefault(); sendChat(); } });
 document.addEventListener('input', e => { if(e.target.id==='x-msg'){ state.adminMsg = e.target.value; const c = $('#x-count'); if(c) c.textContent = `${e.target.value.length}/280`; } });
 document.addEventListener('change', async e => {
